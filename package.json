@@ -15,7 +15,7 @@
   "dependencies": {
     "@botdojo/chat-sdk": "^0.0.6",
     "@botdojo/sdk": "^0.0.6",
-    "mcp-app-view": "^0.1.1",
+    "mcp-app-view": "^0.1.0",
     "@mdxeditor/editor": "^3.10.0",
     "next": "^13.5.2",
     "prism-react-renderer": "^2.3.0",
