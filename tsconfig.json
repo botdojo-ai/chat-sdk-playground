@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@botdojo/chat-sdk": ["../../packages/sdk-chat/src/index.tsx"],
+      "@botdojo/sdk-canvas": ["../../packages/sdk-canvas/src/index.ts"],
+      "@botdojo/sdk-types": ["../../packages/sdk-types/src/index.ts"],
+      "@botdojo/sdk": ["../../packages/sdk-botdojo/src/index.ts"],
+      "mcp-app-view": ["../../packages/mcp-app/src/index.ts"],
+      "mcp-app-view/react": ["../../packages/mcp-app/src/react/index.ts"],
+      "mcp-app-view/host": ["../../packages/mcp-app/src/host/index.ts"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules"]
+}
+
