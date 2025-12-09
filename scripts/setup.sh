@@ -77,41 +77,45 @@ ENV_FILE="$(dirname "$0")/../.env.local"
 ACCOUNT_ID=""
 PROJECT_ID=""
 
+# Get current CLI context (what the user is currently logged into)
+STATUS_OUTPUT=$(botdojo status 2>&1)
+CLI_ACCOUNT_ID=$(echo "$STATUS_OUTPUT" | grep "Account ID:" | grep -o "[a-f0-9-]\{36\}")
+CLI_PROJECT_ID=$(echo "$STATUS_OUTPUT" | grep "Project ID:" | grep -o "[a-f0-9-]\{36\}")
+
+echo -e "${BLUE}Current CLI context:${RESET}"
+echo -e "  Account ID: ${CLI_ACCOUNT_ID:-Not set}"
+echo -e "  Project ID: ${CLI_PROJECT_ID:-Not set}\n"
+
 # Check if .env.local exists and has account/project IDs
 if [ -f "$ENV_FILE" ]; then
-    EXISTING_ACCOUNT_ID=$(grep "NEXT_PUBLIC_ACCOUNT_ID=" "$ENV_FILE" | cut -d'=' -f2)
-    EXISTING_PROJECT_ID=$(grep "NEXT_PUBLIC_PROJECT_ID=" "$ENV_FILE" | cut -d'=' -f2)
+    ENV_ACCOUNT_ID=$(grep "NEXT_PUBLIC_ACCOUNT_ID=" "$ENV_FILE" | cut -d'=' -f2)
+    ENV_PROJECT_ID=$(grep "NEXT_PUBLIC_PROJECT_ID=" "$ENV_FILE" | cut -d'=' -f2)
     
-    if [ -n "$EXISTING_ACCOUNT_ID" ] && [ -n "$EXISTING_PROJECT_ID" ]; then
-        echo -e "${YELLOW}ℹ Found existing account and project in .env.local${RESET}"
-        echo -e "${BLUE}  Account ID: ${EXISTING_ACCOUNT_ID}${RESET}"
-        echo -e "${BLUE}  Project ID: ${EXISTING_PROJECT_ID}${RESET}\n"
-        echo -e "${BLUE}ℹ Switching to existing account and project...${RESET}\n"
-        
-        # Use botdojo switch to set the account and project
-        # First switch account
-        botdojo switch --account-id "$EXISTING_ACCOUNT_ID" --project-id "$EXISTING_PROJECT_ID" 2>&1 || {
-            echo -e "${YELLOW}⚠️  Could not switch to existing account/project${RESET}"
-            echo -e "${YELLOW}ℹ Will create/select project instead${RESET}\n"
-            EXISTING_ACCOUNT_ID=""
-            EXISTING_PROJECT_ID=""
-        }
-        
-        if [ -n "$EXISTING_ACCOUNT_ID" ] && [ -n "$EXISTING_PROJECT_ID" ]; then
-            ACCOUNT_ID="$EXISTING_ACCOUNT_ID"
-            PROJECT_ID="$EXISTING_PROJECT_ID"
-            echo -e "${GREEN}✓ Switched to existing account and project${RESET}\n"
+    if [ -n "$ENV_ACCOUNT_ID" ] && [ -n "$ENV_PROJECT_ID" ]; then
+        # Check if .env.local matches current CLI context
+        if [ "$ENV_PROJECT_ID" = "$CLI_PROJECT_ID" ]; then
+            echo -e "${GREEN}✓ .env.local matches current CLI project${RESET}\n"
+            ACCOUNT_ID="$CLI_ACCOUNT_ID"
+            PROJECT_ID="$CLI_PROJECT_ID"
+        else
+            echo -e "${YELLOW}⚠️  .env.local has different project than current CLI context${RESET}"
+            echo -e "  .env.local Project: ${ENV_PROJECT_ID}"
+            echo -e "  CLI Project:        ${CLI_PROJECT_ID}\n"
+            echo -e "${BLUE}ℹ Using current CLI project (you can switch with 'botdojo switch')${RESET}\n"
+            # Use CLI context, will clone fresh flows for this project
+            ACCOUNT_ID="$CLI_ACCOUNT_ID"
+            PROJECT_ID="$CLI_PROJECT_ID"
         fi
     fi
 fi
 
-# If no existing account/project in .env, create/select project
+# If CLI doesn't have account/project set, create/select project
 if [ -z "$ACCOUNT_ID" ] || [ -z "$PROJECT_ID" ]; then
     echo -e "${BLUE}ℹ Creating/selecting project 'SDK Playground'...${RESET}\n"
     botdojo project create "SDK Playground" --yes
     echo -e "${GREEN}✓ Project setup complete${RESET}\n"
     
-    # Get status info
+    # Get status info again after project creation
     STATUS_OUTPUT=$(botdojo status 2>&1)
     ACCOUNT_ID=$(echo "$STATUS_OUTPUT" | grep "Account ID:" | grep -o "[a-f0-9-]\{36\}")
     PROJECT_ID=$(echo "$STATUS_OUTPUT" | grep "Project ID:" | grep -o "[a-f0-9-]\{36\}")
@@ -130,38 +134,74 @@ fi
 # Step 4: Check for existing flows or clone new ones
 echo -e "${BOLD}${CYAN}📥 Setting up SDK Test Flows${RESET}\n"
 
+# Check if project changed from .env.local - if so, we need to find/clone flows fresh
+PROJECT_CHANGED=false
+if [ -f "$ENV_FILE" ]; then
+    ENV_PROJECT_ID=$(grep "NEXT_PUBLIC_PROJECT_ID=" "$ENV_FILE" | cut -d'=' -f2)
+    if [ -n "$ENV_PROJECT_ID" ] && [ "$ENV_PROJECT_ID" != "$PROJECT_ID" ]; then
+        PROJECT_CHANGED=true
+        echo -e "${YELLOW}ℹ Project changed - will look for existing flows in current project${RESET}\n"
+    fi
+fi
+
+# Get list of flows in current project
+echo -e "${BLUE}ℹ Checking for existing flows in project...${RESET}\n"
+FLOW_LIST=$(botdojo flow list 2>&1 || echo "")
+
 # --- Basic Flow ---
 echo -e "${BOLD}1. Basic Flow (Simple Test)${RESET}"
 BASIC_FLOW_ID=""
+BASIC_FLOW_NAME="SDK - Basic Test Flow"
 
-# Check if .env.local exists and has a basic flow ID
-if [ -f "$ENV_FILE" ]; then
-    EXISTING_BASIC_FLOW_ID=$(grep "NEXT_PUBLIC_BOTDOJO_SIMPLE_TEST_FLOW_ID=" "$ENV_FILE" | cut -d'=' -f2)
-    
-    if [ -n "$EXISTING_BASIC_FLOW_ID" ]; then
-        echo -e "${YELLOW}ℹ Found existing basic flow ID: ${EXISTING_BASIC_FLOW_ID}${RESET}"
+# First, check if flow already exists in current project by name
+if echo "$FLOW_LIST" | grep -q "$BASIC_FLOW_NAME"; then
+    # Extract the flow ID for this flow name
+    BASIC_FLOW_ID=$(echo "$FLOW_LIST" | grep "$BASIC_FLOW_NAME" | grep -o "[a-f0-9-]\{36\}" | head -1)
+    if [ -n "$BASIC_FLOW_ID" ]; then
+        echo -e "${GREEN}✓ Found existing flow '$BASIC_FLOW_NAME' in project: ${BASIC_FLOW_ID}${RESET}"
         echo -e "${BLUE}ℹ Pulling latest release from origin...${RESET}\n"
         
         # Pull latest from origin
+        PULL_OUTPUT=$(botdojo pull-from-origin "$BASIC_FLOW_ID" --yes 2>&1)
+        echo "$PULL_OUTPUT"
+        
+        if echo "$PULL_OUTPUT" | grep -q "Successfully pulled"; then
+            echo -e "\n${GREEN}✓ Basic flow updated from origin${RESET}\n"
+        else
+            echo -e "\n${YELLOW}⚠️  Could not pull from origin (flow may not have a source)${RESET}"
+            echo -e "${GREEN}✓ Using existing basic flow${RESET}\n"
+        fi
+    fi
+fi
+
+# If flow not found in project and project didn't change, check .env.local
+if [ -z "$BASIC_FLOW_ID" ] && [ "$PROJECT_CHANGED" = false ] && [ -f "$ENV_FILE" ]; then
+    EXISTING_BASIC_FLOW_ID=$(grep "NEXT_PUBLIC_BOTDOJO_SIMPLE_TEST_FLOW_ID=" "$ENV_FILE" | cut -d'=' -f2)
+    
+    if [ -n "$EXISTING_BASIC_FLOW_ID" ]; then
+        echo -e "${YELLOW}ℹ Found flow ID in .env.local: ${EXISTING_BASIC_FLOW_ID}${RESET}"
+        echo -e "${BLUE}ℹ Pulling latest release from origin...${RESET}\n"
+        
         PULL_OUTPUT=$(botdojo pull-from-origin "$EXISTING_BASIC_FLOW_ID" --yes 2>&1)
         echo "$PULL_OUTPUT"
         
         if echo "$PULL_OUTPUT" | grep -q "Successfully pulled"; then
             echo -e "\n${GREEN}✓ Basic flow updated from origin${RESET}\n"
             BASIC_FLOW_ID="$EXISTING_BASIC_FLOW_ID"
+        elif echo "$PULL_OUTPUT" | grep -qi "not found\|error"; then
+            echo -e "\n${YELLOW}⚠️  Flow not found in project, will clone fresh${RESET}\n"
         else
-            echo -e "\n${YELLOW}⚠️  Could not pull from origin (flow may not have a source)${RESET}"
-            echo -e "${GREEN}✓ Using existing basic flow: ${EXISTING_BASIC_FLOW_ID}${RESET}\n"
+            echo -e "\n${GREEN}✓ Using existing basic flow${RESET}\n"
             BASIC_FLOW_ID="$EXISTING_BASIC_FLOW_ID"
         fi
     fi
 fi
 
-# If no existing basic flow ID in .env, clone a new one
+# If still no basic flow, clone a new one
 if [ -z "$BASIC_FLOW_ID" ]; then
-    echo -e "${BLUE}ℹ No existing basic flow found, cloning from ${BASIC_FLOW_URI}...${RESET}\n"
+    echo -e "${BLUE}ℹ Cloning basic flow from ${BASIC_FLOW_URI}...${RESET}\n"
     
-    CLONE_OUTPUT=$(botdojo cloneToProject "$BASIC_FLOW_URI" --name "SDK - Basic Test Flow" 2>&1)
+    CLONE_OUTPUT=$(botdojo cloneToProject "$BASIC_FLOW_URI" --name "$BASIC_FLOW_NAME" 2>&1)
     echo "$CLONE_OUTPUT"
     
     # Extract flow ID from output
@@ -178,35 +218,57 @@ fi
 # --- Model Context Flow ---
 echo -e "${BOLD}2. Model Context Flow${RESET}"
 MODEL_CONTEXT_FLOW_ID=""
+MODEL_CONTEXT_FLOW_NAME="SDK - With Model Context"
 
-# Check if .env.local exists and has a model context flow ID
-if [ -f "$ENV_FILE" ]; then
-    EXISTING_MODEL_CONTEXT_FLOW_ID=$(grep "NEXT_PUBLIC_BOTDOJO_MODEL_CONTEXT_FLOW_ID=" "$ENV_FILE" | cut -d'=' -f2)
-    
-    if [ -n "$EXISTING_MODEL_CONTEXT_FLOW_ID" ]; then
-        echo -e "${YELLOW}ℹ Found existing model context flow ID: ${EXISTING_MODEL_CONTEXT_FLOW_ID}${RESET}"
+# First, check if flow already exists in current project by name
+if echo "$FLOW_LIST" | grep -q "$MODEL_CONTEXT_FLOW_NAME"; then
+    # Extract the flow ID for this flow name
+    MODEL_CONTEXT_FLOW_ID=$(echo "$FLOW_LIST" | grep "$MODEL_CONTEXT_FLOW_NAME" | grep -o "[a-f0-9-]\{36\}" | head -1)
+    if [ -n "$MODEL_CONTEXT_FLOW_ID" ]; then
+        echo -e "${GREEN}✓ Found existing flow '$MODEL_CONTEXT_FLOW_NAME' in project: ${MODEL_CONTEXT_FLOW_ID}${RESET}"
         echo -e "${BLUE}ℹ Pulling latest release from origin...${RESET}\n"
         
         # Pull latest from origin
+        PULL_OUTPUT=$(botdojo pull-from-origin "$MODEL_CONTEXT_FLOW_ID" --yes 2>&1)
+        echo "$PULL_OUTPUT"
+        
+        if echo "$PULL_OUTPUT" | grep -q "Successfully pulled"; then
+            echo -e "\n${GREEN}✓ Model context flow updated from origin${RESET}\n"
+        else
+            echo -e "\n${YELLOW}⚠️  Could not pull from origin (flow may not have a source)${RESET}"
+            echo -e "${GREEN}✓ Using existing model context flow${RESET}\n"
+        fi
+    fi
+fi
+
+# If flow not found in project and project didn't change, check .env.local
+if [ -z "$MODEL_CONTEXT_FLOW_ID" ] && [ "$PROJECT_CHANGED" = false ] && [ -f "$ENV_FILE" ]; then
+    EXISTING_MODEL_CONTEXT_FLOW_ID=$(grep "NEXT_PUBLIC_BOTDOJO_MODEL_CONTEXT_FLOW_ID=" "$ENV_FILE" | cut -d'=' -f2)
+    
+    if [ -n "$EXISTING_MODEL_CONTEXT_FLOW_ID" ]; then
+        echo -e "${YELLOW}ℹ Found flow ID in .env.local: ${EXISTING_MODEL_CONTEXT_FLOW_ID}${RESET}"
+        echo -e "${BLUE}ℹ Pulling latest release from origin...${RESET}\n"
+        
         PULL_OUTPUT=$(botdojo pull-from-origin "$EXISTING_MODEL_CONTEXT_FLOW_ID" --yes 2>&1)
         echo "$PULL_OUTPUT"
         
         if echo "$PULL_OUTPUT" | grep -q "Successfully pulled"; then
             echo -e "\n${GREEN}✓ Model context flow updated from origin${RESET}\n"
             MODEL_CONTEXT_FLOW_ID="$EXISTING_MODEL_CONTEXT_FLOW_ID"
+        elif echo "$PULL_OUTPUT" | grep -qi "not found\|error"; then
+            echo -e "\n${YELLOW}⚠️  Flow not found in project, will clone fresh${RESET}\n"
         else
-            echo -e "\n${YELLOW}⚠️  Could not pull from origin (flow may not have a source)${RESET}"
-            echo -e "${GREEN}✓ Using existing model context flow: ${EXISTING_MODEL_CONTEXT_FLOW_ID}${RESET}\n"
+            echo -e "\n${GREEN}✓ Using existing model context flow${RESET}\n"
             MODEL_CONTEXT_FLOW_ID="$EXISTING_MODEL_CONTEXT_FLOW_ID"
         fi
     fi
 fi
 
-# If no existing model context flow ID in .env, clone a new one
+# If still no model context flow, clone a new one
 if [ -z "$MODEL_CONTEXT_FLOW_ID" ]; then
-    echo -e "${BLUE}ℹ No existing model context flow found, cloning from ${MODEL_CONTEXT_FLOW_URI}...${RESET}\n"
+    echo -e "${BLUE}ℹ Cloning model context flow from ${MODEL_CONTEXT_FLOW_URI}...${RESET}\n"
     
-    CLONE_OUTPUT=$(botdojo cloneToProject "$MODEL_CONTEXT_FLOW_URI" --name "SDK - With Model Context" 2>&1)
+    CLONE_OUTPUT=$(botdojo cloneToProject "$MODEL_CONTEXT_FLOW_URI" --name "$MODEL_CONTEXT_FLOW_NAME" 2>&1)
     echo "$CLONE_OUTPUT"
     
     # Extract flow ID from output
