@@ -4,7 +4,7 @@
 #
 # This script uses the BotDojo CLI to:
 # 1. Authenticate with BotDojo (botdojo login)
-# 2. Switch to existing account/project OR create "SDK Playground" project
+# 2. Use existing CLI project (never auto-switches projects)
 # 3. Pull latest flow OR clone the SDK test flow
 # 4. Create an API key for the flow (botdojo flow api_key create)
 # 5. Generate .env.local with all required configuration
@@ -61,12 +61,17 @@ if botdojo status &> /dev/null; then
         echo -e "${GREEN}✓ Already authenticated with BotDojo${RESET}\n"
     else
         echo -e "${BLUE}ℹ Running botdojo login (will open browser)...${RESET}\n"
-        botdojo login
+        botdojo login --suggested-project-name "SDK Playground"
         echo -e "${GREEN}✓ Successfully authenticated${RESET}\n"
     fi
 else
-    echo -e "${BLUE}ℹ Running botdojo login (will open browser)...${RESET}\n"
-    botdojo login
+    echo -e "${BLUE}ℹ You will need to login or create a free BotDojo account.${RESET}"
+    echo -e "${BLUE}  This will open your browser for authentication.${RESET}\n"
+    echo -e "${CYAN}Press any key to continue...${RESET}"
+    read -n 1 -s -r
+    echo ""
+    echo -e "${BLUE}ℹ Opening browser for login...${RESET}\n"
+    botdojo login --suggested-project-name "SDK Playground"
     echo -e "${GREEN}✓ Successfully authenticated${RESET}\n"
 fi
 
@@ -77,10 +82,33 @@ ENV_FILE="$(dirname "$0")/../.env.local"
 ACCOUNT_ID=""
 PROJECT_ID=""
 
-# Get current CLI context (what the user is currently logged into)
-STATUS_OUTPUT=$(botdojo status 2>&1)
-CLI_ACCOUNT_ID=$(echo "$STATUS_OUTPUT" | grep "Account ID:" | grep -o "[a-f0-9-]\{36\}")
-CLI_PROJECT_ID=$(echo "$STATUS_OUTPUT" | grep "Project ID:" | grep -o "[a-f0-9-]\{36\}")
+# Get current CLI context from config.json (more reliable than parsing status output)
+CLI_CONFIG_FILE="$HOME/.botdojo/config.json"
+CLI_ACCOUNT_ID=""
+CLI_PROJECT_ID=""
+
+if [ -f "$CLI_CONFIG_FILE" ]; then
+    # Use jq if available, otherwise fall back to grep
+    if command -v jq &> /dev/null; then
+        CLI_ACCOUNT_ID=$(jq -r '.accountId // empty' "$CLI_CONFIG_FILE" 2>/dev/null)
+        CLI_PROJECT_ID=$(jq -r '.projectId // empty' "$CLI_CONFIG_FILE" 2>/dev/null)
+    else
+        # Fallback to grep if jq not available
+        CLI_ACCOUNT_ID=$(grep -o '"accountId"[[:space:]]*:[[:space:]]*"[^"]*"' "$CLI_CONFIG_FILE" | grep -o "[a-f0-9-]\{36\}" | head -1)
+        CLI_PROJECT_ID=$(grep -o '"projectId"[[:space:]]*:[[:space:]]*"[^"]*"' "$CLI_CONFIG_FILE" | grep -o "[a-f0-9-]\{36\}" | head -1)
+    fi
+fi
+
+# If config.json didn't have values, try botdojo status as fallback
+if [ -z "$CLI_ACCOUNT_ID" ] || [ -z "$CLI_PROJECT_ID" ]; then
+    STATUS_OUTPUT=$(botdojo status 2>&1)
+    if [ -z "$CLI_ACCOUNT_ID" ]; then
+        CLI_ACCOUNT_ID=$(echo "$STATUS_OUTPUT" | grep "Account ID:" | grep -o "[a-f0-9-]\{36\}")
+    fi
+    if [ -z "$CLI_PROJECT_ID" ]; then
+        CLI_PROJECT_ID=$(echo "$STATUS_OUTPUT" | grep "Project ID:" | grep -o "[a-f0-9-]\{36\}")
+    fi
+fi
 
 echo -e "${BLUE}Current CLI context:${RESET}"
 echo -e "  Account ID: ${CLI_ACCOUNT_ID:-Not set}"
@@ -98,32 +126,37 @@ if [ -f "$ENV_FILE" ]; then
             ACCOUNT_ID="$CLI_ACCOUNT_ID"
             PROJECT_ID="$CLI_PROJECT_ID"
         else
-            echo -e "${YELLOW}⚠️  .env.local has different project than current CLI context${RESET}"
+            echo -e "${RED}✗ Project mismatch detected${RESET}\n"
+            echo -e "${YELLOW}Your .env.local has a different project than your current CLI context.${RESET}"
+            echo -e "${YELLOW}Setup will NOT automatically switch projects to prevent confusion.${RESET}\n"
+            echo -e "  .env.local Account: ${ENV_ACCOUNT_ID}"
             echo -e "  .env.local Project: ${ENV_PROJECT_ID}"
-            echo -e "  CLI Project:        ${CLI_PROJECT_ID}\n"
-            echo -e "${BLUE}ℹ Using current CLI project (you can switch with 'botdojo switch')${RESET}\n"
-            # Use CLI context, will clone fresh flows for this project
-            ACCOUNT_ID="$CLI_ACCOUNT_ID"
-            PROJECT_ID="$CLI_PROJECT_ID"
+            echo -e "  CLI Account:        ${CLI_ACCOUNT_ID:-Not set}"
+            echo -e "  CLI Project:        ${CLI_PROJECT_ID:-Not set}\n"
+            echo -e "${BLUE}To continue with the project from .env.local, run:${RESET}\n"
+            echo -e "  ${CYAN}botdojo switch --account-id ${ENV_ACCOUNT_ID} --project-id ${ENV_PROJECT_ID}${RESET}\n"
+            echo -e "${BLUE}Then run this setup script again.${RESET}\n"
+            
+            exit 1
         fi
     fi
 fi
 
-# If CLI doesn't have account/project set, create/select project
+# If no account/project set yet, use current CLI context or prompt user to login
 if [ -z "$ACCOUNT_ID" ] || [ -z "$PROJECT_ID" ]; then
-    echo -e "${BLUE}ℹ Creating/selecting project 'SDK Playground'...${RESET}\n"
-    botdojo project create "SDK Playground" --yes
-    echo -e "${GREEN}✓ Project setup complete${RESET}\n"
-    
-    # Get status info again after project creation
-    STATUS_OUTPUT=$(botdojo status 2>&1)
-    ACCOUNT_ID=$(echo "$STATUS_OUTPUT" | grep "Account ID:" | grep -o "[a-f0-9-]\{36\}")
-    PROJECT_ID=$(echo "$STATUS_OUTPUT" | grep "Project ID:" | grep -o "[a-f0-9-]\{36\}")
-    
-    if [ -z "$ACCOUNT_ID" ] || [ -z "$PROJECT_ID" ]; then
-        echo -e "${RED}✗ Failed to get account/project information${RESET}\n"
-        echo -e "${YELLOW}Status output:${RESET}"
-        echo "$STATUS_OUTPUT"
+    # Always prefer current CLI project if it's set - never switch away from it
+    if [ -n "$CLI_ACCOUNT_ID" ] && [ -n "$CLI_PROJECT_ID" ]; then
+        echo -e "${GREEN}✓ Using current CLI project (no .env.local found)${RESET}\n"
+        ACCOUNT_ID="$CLI_ACCOUNT_ID"
+        PROJECT_ID="$CLI_PROJECT_ID"
+    else
+        # CLI doesn't have a project set - run login to let user select/create one
+        echo -e "${RED}✗ No project configured in CLI${RESET}\n"
+        echo -e "${YELLOW}Please run login to select or create a project for this playground:${RESET}\n"
+        echo -e "  ${CYAN}botdojo login --suggested-project-name \"SDK Playground\"${RESET}\n"
+        echo -e "${BLUE}This will help you create or select a project for the playground.${RESET}"
+        echo -e "${BLUE}Then run this setup script again.${RESET}\n"
+        
         exit 1
     fi
     
@@ -152,6 +185,7 @@ FLOW_LIST=$(botdojo flow list 2>&1 || echo "")
 echo -e "${BOLD}1. Basic Flow (Simple Test)${RESET}"
 BASIC_FLOW_ID=""
 BASIC_FLOW_NAME="SDK - Basic Test Flow"
+BASIC_FLOW_NEWLY_CLONED=false
 
 # First, check if flow already exists in current project by name
 if echo "$FLOW_LIST" | grep -q "$BASIC_FLOW_NAME"; then
@@ -213,12 +247,14 @@ if [ -z "$BASIC_FLOW_ID" ]; then
     fi
     
     echo -e "\n${GREEN}✓ Basic flow cloned successfully: ${BASIC_FLOW_ID}${RESET}\n"
+    BASIC_FLOW_NEWLY_CLONED=true
 fi
 
 # --- Model Context Flow ---
 echo -e "${BOLD}2. Model Context Flow${RESET}"
 MODEL_CONTEXT_FLOW_ID=""
 MODEL_CONTEXT_FLOW_NAME="SDK - With Model Context"
+MODEL_CONTEXT_FLOW_NEWLY_CLONED=false
 
 # First, check if flow already exists in current project by name
 if echo "$FLOW_LIST" | grep -q "$MODEL_CONTEXT_FLOW_NAME"; then
@@ -280,6 +316,7 @@ if [ -z "$MODEL_CONTEXT_FLOW_ID" ]; then
     fi
     
     echo -e "\n${GREEN}✓ Model context flow cloned successfully: ${MODEL_CONTEXT_FLOW_ID}${RESET}\n"
+    MODEL_CONTEXT_FLOW_NEWLY_CLONED=true
 fi
 
 # Step 5: Create API Keys
@@ -287,37 +324,81 @@ echo -e "${BOLD}${CYAN}🔑 Creating API Keys${RESET}\n"
 
 # --- Basic Flow API Key ---
 echo -e "${BOLD}1. Basic Flow API Key${RESET}"
-echo -e "${BLUE}ℹ Creating API key for basic flow...${RESET}\n"
+BASIC_API_KEY=""
+BASIC_API_KEY_NAME="SDK Playground - Basic"
 
-BASIC_API_KEY_OUTPUT=$(botdojo flow api_key create "$BASIC_FLOW_ID" --name "SDK Playground - Basic" 2>&1)
-echo "$BASIC_API_KEY_OUTPUT"
-
-# Extract API key from output
-BASIC_API_KEY=$(echo "$BASIC_API_KEY_OUTPUT" | grep -i "API Key:" | grep -o "[a-f0-9-]\{36\}")
-
-if [ -z "$BASIC_API_KEY" ]; then
-    echo -e "\n${RED}✗ Failed to extract basic API key from output${RESET}\n"
-    exit 1
+# Check if API key already exists in .env.local
+if [ -f "$ENV_FILE" ]; then
+    EXISTING_BASIC_API_KEY=$(grep "NEXT_PUBLIC_BOTDOJO_SIMPLE_TEST_API=" "$ENV_FILE" | cut -d'=' -f2)
+    if [ -n "$EXISTING_BASIC_API_KEY" ]; then
+        echo -e "${GREEN}✓ Found existing API key in .env.local${RESET}\n"
+        BASIC_API_KEY="$EXISTING_BASIC_API_KEY"
+    fi
 fi
 
-echo -e "\n${GREEN}✓ Basic flow API key created successfully${RESET}\n"
+# Only create API key if flow was newly cloned and we don't have one in .env.local
+if [ -z "$BASIC_API_KEY" ] && [ "$BASIC_FLOW_NEWLY_CLONED" = true ]; then
+    echo -e "${BLUE}ℹ Creating API key for newly cloned basic flow...${RESET}\n"
+    BASIC_API_KEY_OUTPUT=$(botdojo flow api_key create "$BASIC_FLOW_ID" --name "$BASIC_API_KEY_NAME" 2>&1)
+    echo "$BASIC_API_KEY_OUTPUT"
+    
+    # Extract API key from output (matches UUID format or hex strings)
+    BASIC_API_KEY=$(echo "$BASIC_API_KEY_OUTPUT" | grep -i "API Key:" | sed -E 's/.*API Key:[[:space:]]*([a-f0-9-]+).*/\1/I' | tr -d ' ')
+    
+    if [ -z "$BASIC_API_KEY" ]; then
+        echo -e "\n${RED}✗ Failed to extract basic API key from output${RESET}\n"
+        exit 1
+    fi
+    
+    echo -e "\n${GREEN}✓ Basic flow API key created successfully${RESET}\n"
+elif [ -z "$BASIC_API_KEY" ]; then
+    # Flow exists but no API key in .env.local - assume one exists for the flow
+    echo -e "${BLUE}ℹ Flow already exists - assuming API key exists for this flow${RESET}\n"
+    echo -e "${YELLOW}⚠️  No API key found in .env.local. You may need to add it manually.${RESET}\n"
+    echo -e "${YELLOW}To create a new API key, run:${RESET}\n"
+    echo -e "  ${CYAN}botdojo flow api_key create ${BASIC_FLOW_ID} --name \"${BASIC_API_KEY_NAME}\"${RESET}\n"
+    # Continue without API key - user can add it later
+    BASIC_API_KEY=""
+fi
 
 # --- Model Context Flow API Key ---
 echo -e "${BOLD}2. Model Context Flow API Key${RESET}"
-echo -e "${BLUE}ℹ Creating API key for model context flow...${RESET}\n"
+MODEL_CONTEXT_API_KEY=""
+MODEL_CONTEXT_API_KEY_NAME="SDK Playground - Model Context"
 
-MODEL_CONTEXT_API_KEY_OUTPUT=$(botdojo flow api_key create "$MODEL_CONTEXT_FLOW_ID" --name "SDK Playground - Model Context" 2>&1)
-echo "$MODEL_CONTEXT_API_KEY_OUTPUT"
-
-# Extract API key from output
-MODEL_CONTEXT_API_KEY=$(echo "$MODEL_CONTEXT_API_KEY_OUTPUT" | grep -i "API Key:" | grep -o "[a-f0-9-]\{36\}")
-
-if [ -z "$MODEL_CONTEXT_API_KEY" ]; then
-    echo -e "\n${RED}✗ Failed to extract model context API key from output${RESET}\n"
-    exit 1
+# Check if API key already exists in .env.local
+if [ -f "$ENV_FILE" ]; then
+    EXISTING_MODEL_CONTEXT_API_KEY=$(grep "NEXT_PUBLIC_BOTDOJO_MODEL_CONTEXT_API=" "$ENV_FILE" | cut -d'=' -f2)
+    if [ -n "$EXISTING_MODEL_CONTEXT_API_KEY" ]; then
+        echo -e "${GREEN}✓ Found existing API key in .env.local${RESET}\n"
+        MODEL_CONTEXT_API_KEY="$EXISTING_MODEL_CONTEXT_API_KEY"
+    fi
 fi
 
-echo -e "\n${GREEN}✓ Model context flow API key created successfully${RESET}\n"
+# Only create API key if flow was newly cloned and we don't have one in .env.local
+if [ -z "$MODEL_CONTEXT_API_KEY" ] && [ "$MODEL_CONTEXT_FLOW_NEWLY_CLONED" = true ]; then
+    echo -e "${BLUE}ℹ Creating API key for newly cloned model context flow...${RESET}\n"
+    MODEL_CONTEXT_API_KEY_OUTPUT=$(botdojo flow api_key create "$MODEL_CONTEXT_FLOW_ID" --name "$MODEL_CONTEXT_API_KEY_NAME" 2>&1)
+    echo "$MODEL_CONTEXT_API_KEY_OUTPUT"
+    
+    # Extract API key from output (matches UUID format or hex strings)
+    MODEL_CONTEXT_API_KEY=$(echo "$MODEL_CONTEXT_API_KEY_OUTPUT" | grep -i "API Key:" | sed -E 's/.*API Key:[[:space:]]*([a-f0-9-]+).*/\1/I' | tr -d ' ')
+    
+    if [ -z "$MODEL_CONTEXT_API_KEY" ]; then
+        echo -e "\n${RED}✗ Failed to extract model context API key from output${RESET}\n"
+        exit 1
+    fi
+    
+    echo -e "\n${GREEN}✓ Model context flow API key created successfully${RESET}\n"
+elif [ -z "$MODEL_CONTEXT_API_KEY" ]; then
+    # Flow exists but no API key in .env.local - assume one exists for the flow
+    echo -e "${BLUE}ℹ Flow already exists - assuming API key exists for this flow${RESET}\n"
+    echo -e "${YELLOW}⚠️  No API key found in .env.local. You may need to add it manually.${RESET}\n"
+    echo -e "${YELLOW}To create a new API key, run:${RESET}\n"
+    echo -e "  ${CYAN}botdojo flow api_key create ${MODEL_CONTEXT_FLOW_ID} --name \"${MODEL_CONTEXT_API_KEY_NAME}\"${RESET}\n"
+    # Continue without API key - user can add it later
+    MODEL_CONTEXT_API_KEY=""
+fi
 
 # Step 6: Write .env.local file
 echo -e "${BOLD}${CYAN}📝 Writing Configuration${RESET}\n"
@@ -371,8 +452,5 @@ echo -e "  2. Start the development server:"
 echo -e "     ${CYAN}npm run dev${RESET}\n"
 echo -e "  3. Open your browser:"
 echo -e "     ${CYAN}http://localhost:3500${RESET}\n"
-echo -e "${YELLOW}Note:${RESET} The playground defaults to production BotDojo servers.
-echo -e "      To use local servers, uncomment the overrides in .env.local.
-echo -e "For production, update the API URLs in .env.local.\n"
 echo -e "Happy testing! 🚀\n"
 

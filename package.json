@@ -1,6 +1,6 @@
 {
   "name": "botdojo-chat-sdk-playground",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "Interactive playground for BotDojo Chat SDK - explore chat widgets, MCP Apps, and headless integrations with live examples and debugging",
   "scripts": {
     "setup": "bash scripts/setup.sh",

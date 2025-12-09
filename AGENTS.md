@@ -105,11 +105,22 @@ Edit `scripts/setup.sh` (uses BotDojo CLI commands)
 
 **Setup Script Behavior:**
 - **Idempotent**: Safe to run multiple times
+- **Never auto-switches projects**: Respects your current CLI context
+- **Interactive login prompts**: When login is needed, prompts user to press any key before opening browser
+- **Project validation**: 
+  - If .env.local project doesn't match CLI → stops with error and shows exact `botdojo switch` command
+  - If no CLI project is set → stops with error and shows `botdojo login` command
+  - Never automatically creates or switches projects without explicit user action
 - **Smart Resume**: Uses `.env.local` to remember:
-  - Account/Project IDs → skips selection prompts, uses `botdojo switch --account-id --project-id`
-  - Flow ID → pulls latest from origin instead of cloning again
-- **First Run**: Prompts for account/project, clones flow, creates API key
-- **Subsequent Runs**: Switches to saved account/project, updates flow from origin
+  - Account/Project IDs → validates they match current CLI context
+  - Flow IDs → pulls latest from origin instead of cloning again
+  - API keys → reuses existing keys, only creates new ones for newly cloned flows
+- **API Key Management**:
+  - Only creates API keys when flows are freshly cloned
+  - Reuses existing API keys from .env.local if available
+  - For existing flows without keys in .env.local, provides command to create one manually
+- **First Run**: Prompts for login, lets user select account/project, clones flows, creates API keys
+- **Subsequent Runs**: Uses current CLI project, updates flows from origin, preserves existing API keys
 
 ## Run & test
 

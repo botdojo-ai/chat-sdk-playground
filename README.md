@@ -46,13 +46,17 @@ npm run setup
 ```
 
 This will:
-- Authenticate you with BotDojo (opens browser)
-- Create or select "SDK Playground" project
-- Clone test agent flows to your project
-- Create API keys for the examples
+- Authenticate you with BotDojo (opens browser with user confirmation)
+- Use your current CLI project context (never auto-switches)
+- Clone test agent flows to your project (or update existing ones)
+- Create public API keys for newly cloned flows
 - Generate `.env.local` with all configuration
 
-**Note:** The setup script is idempotent - safe to run multiple times. It will update existing flows from their origin instead of creating duplicates.
+**Note:** The setup script is idempotent - safe to run multiple times. It will:
+- Update existing flows from their origin instead of creating duplicates
+- Preserve existing API keys from `.env.local`
+- Only create new API keys for freshly cloned flows
+- Never automatically switch your CLI project context
 
 ### Start Development Server
 
