@@ -7,6 +7,18 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   const { query, category } = req.body;
+  const forwardedProto = (req.headers['x-forwarded-proto'] as string) || '';
+  const host = req.headers['x-forwarded-host'] || req.headers.host || '';
+  const protocol = forwardedProto.split(',')[0]?.trim() || ((req.socket as any).encrypted ? 'https' : 'http');
+  const origin = host ? `${protocol}://${host}` : '';
+
+  const toAbsoluteImage = (path?: string) => {
+    if (!path) return path;
+    if (/^https?:\/\//i.test(path)) return path;
+    if (!origin) return path;
+    // Ensure single slash join
+    return `${origin}${path.startsWith('/') ? path : `/${path}`}`;
+  };
 
   let filtered = products;
 
@@ -25,6 +37,11 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     );
   }
 
-  return res.status(200).json(filtered);
-}
+  const withAbsoluteImages = filtered.map(p => ({
+    ...p,
+    imagePath: toAbsoluteImage(p.imagePath),
+    imageUrl: toAbsoluteImage((p as any).imageUrl || p.imagePath),
+  }));
 
+  return res.status(200).json(withAbsoluteImages);
+}

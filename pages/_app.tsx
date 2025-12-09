@@ -8,8 +8,8 @@ import {
   BotDojoChatDebugPanel,
   BotDojoChatDebugNav,
   useBotDojoChatDebugLayout,
-} from '@/lib/BotDojoChatDebug';
-import { ThemeProvider } from '@/lib/theme';
+} from '@/utils/BotDojoChatDebug';
+import { ThemeProvider } from '@/utils/theme';
 import ExampleNav from '@/components/layout/ExampleNav';
 import BonsaiShopAgent from './examples/chat-sdk/bonsai-shop/components/BonsaiShopAgent';
 

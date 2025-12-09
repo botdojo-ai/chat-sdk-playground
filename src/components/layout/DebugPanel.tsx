@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { eventBus, DebugEvent, EventType, EventSource } from '@/lib/eventBus';
+import { eventBus, DebugEvent, EventType, EventSource } from '@/utils/eventBus';
 
 const EVENT_COLORS: Record<EventType, { bg: string; text: string; border: string }> = {
   token: { bg: 'bg-emerald-500', text: 'text-emerald-500', border: 'border-emerald-500' },

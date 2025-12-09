@@ -17,7 +17,7 @@ import {
   BotDojoChatDebugPanel,
   useBotDojoChatDebugLogger,
   useBotDojoChatDebugLayout
-} from '../lib/BotDojoChatDebug';
+} from '../utils/BotDojoChatDebug';
 import { config } from '../../config';
 
 interface BonsaiShopWrapperProps {
@@ -334,10 +334,6 @@ function BonsaiShopWrapperContent({ children }: BonsaiShopWrapperProps): JSX.Ele
               onSessionCreated={handleSessionCreated}
               onSessionHydrated={handleSessionHydrated}
               onRequestAborted={handleRequestAborted}
-              onCanvasLink={handleCanvasLink}
-              onCanvasIntent={handleCanvasIntent}
-              onCanvasNotify={handleCanvasNotify}
-              onCanvasPrompt={handleCanvasPrompt}
             />
           
           {/* Debug Panel */}

@@ -14,14 +14,14 @@ import {
   type ToolExecutionContext,
   type McpAppData,
 } from '@botdojo/chat-sdk';
-import { eventBus } from '@/lib/eventBus';
-import { useBotDojoChatDebugLogger } from '@/lib/BotDojoChatDebug';
+import { eventBus } from '@/utils/eventBus';
+import { useBotDojoChatDebugLogger } from '@/utils/BotDojoChatDebug';
 import CodeSnippet from '@/components/CodeSnippet';
 import { Tabs } from '@/components/Tabs';
 
 const config = {
   apiKey: process.env.NEXT_PUBLIC_BOTDOJO_MODEL_CONTEXT_API || '',
-  baseUrl: process.env.NEXT_PUBLIC_IFRAME_URL || 'http://localhost:3000',
+  baseUrl: process.env.NEXT_PUBLIC_IFRAME_URL || 'https://embed.botdojo.com',
 };
 
 // Event types for the monitor
@@ -34,269 +34,7 @@ interface AppEvent {
   details?: any;
 }
 
-// Inline HTML for the demo MCP App
-const INLINE_HTML_APP = `<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: "Inter", system-ui, -apple-system, sans-serif;
-      background: #ffffff;
-      color: #0f172a;
-      overflow: hidden;
-      height: 100%;
-    }
-    .card {
-      background: #ffffff;
-      color: #0f172a;
-      padding: 16px;
-      border-radius: 16px;
-      border: 1px solid #e2e8f0;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-      font-family: Inter, system-ui, sans-serif;
-      width: 100%;
-      box-sizing: border-box;
-    }
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 16px;
-    }
-    .title {
-      font-weight: 800;
-      font-size: 18px;
-      color: #0f172a;
-    }
-    .subtitle {
-      font-size: 12px;
-      color: #64748b;
-      margin-top: 4px;
-    }
-    .button-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-      margin-bottom: 12px;
-    }
-    .action-btn {
-      padding: 12px 16px;
-      border: 1px solid #e2e8f0;
-      border-radius: 10px;
-      background: #ffffff;
-      color: #0f172a;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 13px;
-      transition: all 0.2s;
-    }
-    .action-btn:hover:not(:disabled) {
-      background: #f8fafc;
-      border-color: #cbd5e1;
-    }
-    .action-btn:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-    .counter-row {
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      padding: 12px;
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .counter-controls {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-    }
-    .counter-btn {
-      padding: 8px 12px;
-      border: 1px solid #e2e8f0;
-      border-radius: 10px;
-      background: #ffffff;
-      color: #0f172a;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 16px;
-    }
-    .counter-value {
-      font-weight: 800;
-      font-size: 20px;
-      color: #0f172a;
-      min-width: 40px;
-      text-align: center;
-    }
-    .persistence-text {
-      font-size: 13px;
-      color: #64748b;
-      font-weight: 500;
-    }
-  </style>
-</head>
-<body>
-  <div class="card" id="card">
-    <div class="header">
-      <div>
-        <div class="title">MCP App Demo</div>
-        <div class="subtitle">Interactive app with event handling</div>
-      </div>
-    </div>
 
-    <div class="button-grid">
-      <button id="btn-tool" class="action-btn">Call tools/call</button>
-      <button id="btn-message" class="action-btn">Send ui/message</button>
-      <button id="btn-link" class="action-btn">Open ui/open-link</button>
-    </div>
-
-    <div class="counter-row">
-      <div class="counter-controls">
-        <button id="btn-decrement" class="counter-btn">-</button>
-        <div class="counter-value" id="counter-value">0</div>
-        <button id="btn-increment" class="counter-btn">+</button>
-      </div>
-      <div class="persistence-text">State persisted via botdojo/persist</div>
-    </div>
-  </div>
-  <script>
-    (function () {
-      let counter = 0;
-      let busy = false;
-      let initialized = false;
-      let parentOrigin = '*';
-      let msgId = 0;
-
-      const counterValueEl = document.getElementById('counter-value');
-      const btnTool = document.getElementById('btn-tool');
-      const btnMessage = document.getElementById('btn-message');
-      const btnLink = document.getElementById('btn-link');
-      const btnDecrement = document.getElementById('btn-decrement');
-      const btnIncrement = document.getElementById('btn-increment');
-      const cardEl = document.getElementById('card');
-
-      function sendNotification(method, params) {
-        window.parent?.postMessage({ jsonrpc: '2.0', method, params }, parentOrigin);
-      }
-
-      function sendResponse(id, result) {
-        window.parent?.postMessage({ jsonrpc: '2.0', id, result }, parentOrigin);
-      }
-
-      function sendRequest(method, params) {
-        const id = 'app-' + (++msgId);
-        window.parent?.postMessage({ jsonrpc: '2.0', id, method, params }, parentOrigin);
-        return id;
-      }
-
-      function reportSize() {
-        if (!cardEl) return;
-        const rect = cardEl.getBoundingClientRect();
-        const height = Math.ceil(rect.height) + 24;
-        const width = Math.ceil(rect.width);
-        sendNotification('ui/size-change', { width, height });
-      }
-
-      function updateCounter(val) {
-        counter = val;
-        if (counterValueEl) {
-          counterValueEl.textContent = counter;
-        }
-        // Persist state via ui/message with botdojo/persist type
-        sendRequest('ui/message', {
-          role: 'user',
-          content: {
-            type: 'botdojo/persist',
-            state: { counter: val },
-          },
-        });
-      }
-
-      function handleAction(type) {
-        if (busy || !initialized) return;
-        busy = true;
-        
-        try {
-          switch (type) {
-            case 'tool':
-              sendRequest('tools/call', {
-                name: 'demo_tool',
-                arguments: { action: 'test', counter: counter },
-              });
-              break;
-            case 'message':
-              sendRequest('ui/message', {
-                role: 'user',
-                content: { type: 'text', text: 'Hello from MCP App! Counter is ' + counter },
-                metadata: { source: 'mcp-app-demo' },
-              });
-              break;
-            case 'link':
-              sendRequest('ui/open-link', {
-                url: 'https://botdojo.com',
-                target: '_blank',
-              });
-              break;
-          }
-        } finally {
-          busy = false;
-        }
-      }
-
-      function handleInitialize(params, id) {
-        const ctx = params?.hostContext || {};
-        const state = ctx.state || {};
-        if (typeof state.counter === 'number') {
-          counter = state.counter;
-          if (counterValueEl) {
-            counterValueEl.textContent = counter;
-          }
-        }
-        parentOrigin = '*';
-        initialized = true;
-        sendResponse(id, { ok: true });
-        sendNotification('ui/notifications/initialized', {});
-        setTimeout(reportSize, 20);
-      }
-
-      function handleMessage(event) {
-        const data = event.data;
-        if (!data || data.jsonrpc !== '2.0') return;
-        
-        if (data.method === 'ui/initialize') {
-          handleInitialize(data.params, data.id);
-        }
-      }
-
-      window.addEventListener('message', handleMessage);
-      
-      btnTool?.addEventListener('click', () => handleAction('tool'));
-      btnMessage?.addEventListener('click', () => handleAction('message'));
-      btnLink?.addEventListener('click', () => handleAction('link'));
-      btnDecrement?.addEventListener('click', () => {
-        if (!busy && initialized) updateCounter(counter - 1);
-      });
-      btnIncrement?.addEventListener('click', () => {
-        if (!busy && initialized) updateCounter(counter + 1);
-      });
-
-      setTimeout(reportSize, 100);
-      
-      if (typeof ResizeObserver !== 'undefined' && cardEl) {
-        const observer = new ResizeObserver(() => reportSize());
-        observer.observe(cardEl);
-      }
-    })();
-  </script>
-</body>
-</html>`;
 
 // Build remote URL for the existing demo app
 const getRemoteUrlCanvasUrl = () => {
@@ -365,42 +103,36 @@ function MessageBubble(props: {
 
   // Extract MCP App data from steps
   const mcpApps: McpAppData[] = [];
-  message.steps?.forEach((step) => {
-    const canvas = (step as any).canvas;
-    if (canvas?.canvasId) {
-      console.log('[MessageBubble] Found canvas in step:', canvas.canvasId, 'isStreaming:', isStreaming, 'isComplete:', isComplete, JSON.stringify(canvas.canvasData, null, 2));
-      const already = mcpApps.find((c) => c.mcpAppId === canvas.canvasId);
-      if (!already) {
-        // Build toolInfo from canvas data
-        const toolName = canvas.canvasData?.toolName || canvas.canvasData?.tool?.name;
-        const toolInfo = toolName ? {
-          id: canvas.canvasId,
-          tool: { name: toolName },
-        } : undefined;
-        
-        // Get result from step.content (like ChatMessage.tsx does) or canvasData.result
-        // Tool result is typically in step.content, not in canvasData
-        const stepResult = (step as any).content ?? canvas.canvasData?.result;
-        
-        mcpApps.push({
-          mcpAppId: canvas.canvasId,
-          mcpAppType: canvas.canvasType || 'mcp-app',
-          url: canvas.canvasData?.url || canvas.url,
-          html: canvas.canvasData?.html || canvas.html,
-          // Start with a small height - the app will report its actual size via ui/size-change
-          height: canvas.canvasData?.height || canvas.height,
-          state: canvas.canvasData?.state,
-          toolInfo,
-          // Include arguments and result for hydration (sent after app initialized)
-          arguments: canvas.canvasData?.arguments,
-          result: stepResult,
-          // Pass completion status for hydration scenarios
-          isComplete: isComplete && !isStreaming,
-        } as McpAppData);
-        console.log('[MessageBubble] Created mcpApp:', mcpApps[mcpApps.length - 1]);
+  if (!isUser) {
+    message.steps?.forEach((step) => {
+      const canvas = (step as any).canvas;
+      if (canvas?.canvasId) {
+        const already = mcpApps.find((c) => c.mcpAppId === canvas.canvasId);
+        if (!already) {
+          const toolName = (step as any).stepToolName;
+          const toolInfo = toolName ? {
+            id: canvas.canvasId,
+            tool: { name: toolName },
+          } : undefined;
+          const stepResult = (step as any).stepToolResult ?? (step as any).content;
+          const stepArguments = (step as any).stepToolArguments;
+          
+          mcpApps.push({
+            mcpAppId: canvas.canvasId,
+            mcpAppType: canvas.canvasType || 'mcp-app',
+            url: canvas.canvasData?.url || canvas.url,
+            html: canvas.canvasData?.html || canvas.html,
+            height: canvas.canvasData?.height || canvas.height,
+            state: canvas.canvasData?.state,
+            toolInfo,
+            arguments: stepArguments,
+            result: stepResult,
+            isComplete: isComplete && !isStreaming,
+          } as McpAppData);
+        }
       }
-    }
-  });
+    });
+  }
 
   return (
     <div
@@ -411,37 +143,42 @@ function MessageBubble(props: {
         marginBottom: '4px',
       }}
     >
-      <div
-        style={{
-          background: isUser ? '#e5e7eb' : '#ffffff',
-          color: '#1f2937',
-          borderRadius: isUser ? '20px 20px 6px 20px' : '20px 20px 20px 6px',
-          padding: isUser ? '14px 18px' : (mcpApps.length > 0 ? '0' : '14px 18px'),
-          maxWidth: isUser ? '85%' : (mcpApps.length > 0 ? '100%' : '85%'),
-          width: isUser ? undefined : (mcpApps.length > 0 ? '100%' : undefined),
-          boxShadow: isUser ? '0 1px 3px rgba(0, 0, 0, 0.06)' : (mcpApps.length > 0 ? 'none' : '0 1px 3px rgba(0, 0, 0, 0.06)'),
-          border: 'none',
-        }}
-      >
-        {/* Render MCP Apps using McpAppHost */}
-        {!isUser && mcpApps.length > 0 && (
-          <div style={{ display: 'grid', gap: '8px', marginBottom: message.content ? 8 : 0 }}>
-            {mcpApps.map((mcpApp) => (
-              <McpAppHost
-                key={mcpApp.mcpAppId}
-                mcpAppId={mcpApp.mcpAppId}
-                mcpAppData={mcpApp}
-                onOpenLink={onOpenLink}
-                onToolCall={onToolCall}
-                onUiMessage={onUiMessage}
-                onPersistState={onPersistState}
-                height={mcpApp.height || '100px'}
-                debug={true}
-              />
-            ))}
-          </div>
-        )}
-        {message.content && (
+      {/* MCP Apps rendered ABOVE the text bubble */}
+      {mcpApps.length > 0 && (
+        <div style={{ 
+          width: '100%',
+          display: 'grid', 
+          gap: '8px', 
+          marginBottom: '8px',
+        }}>
+          {mcpApps.map((mcpApp) => (
+            <McpAppHost
+              key={mcpApp.mcpAppId}
+              mcpAppId={mcpApp.mcpAppId}
+              mcpAppData={mcpApp}
+              onOpenLink={onOpenLink}
+              onToolCall={onToolCall}
+              onUiMessage={onUiMessage}
+              onPersistState={onPersistState}
+              height={mcpApp.height || '100px'}
+              debug={true}
+            />
+          ))}
+        </div>
+      )}
+      {/* User message bubble - always show */}
+      {isUser && (
+        <div
+          style={{
+            background: '#3b82f6',
+            color: '#ffffff',
+            borderRadius: '20px 20px 6px 20px',
+            padding: '14px 18px',
+            maxWidth: '85%',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)',
+            border: 'none',
+          }}
+        >
           <div style={{ 
             fontSize: '15px', 
             lineHeight: 1.65, 
@@ -449,30 +186,55 @@ function MessageBubble(props: {
             fontWeight: 400,
             letterSpacing: '-0.01em',
           }}>
-            {message.content}
-            {isStreaming && <span style={{ opacity: 0.5, marginLeft: 2 }}>▌</span>}
+            {message.content || '...'}
           </div>
-        )}
-        {!isUser && !message.content && mcpApps.length === 0 && (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            color: '#9ca3af',
-            fontSize: '14px',
-          }}>
-            <span style={{
-              display: 'inline-block',
-              width: '8px',
-              height: '8px',
-              borderRadius: '50%',
-              background: '#6366f1',
-              animation: 'pulse 1.5s ease-in-out infinite',
-            }} />
-            Thinking...
-          </div>
-        )}
-      </div>
+        </div>
+      )}
+      {/* Assistant message bubble */}
+      {!isUser && (message.content || mcpApps.length === 0) && (
+        <div
+          style={{
+            background: '#ffffff',
+            color: '#1f2937',
+            borderRadius: '20px 20px 20px 6px',
+            padding: '14px 18px',
+            maxWidth: '85%',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)',
+            border: '1px solid #e5e7eb',
+          }}
+        >
+          {message.content ? (
+            <div style={{ 
+              fontSize: '15px', 
+              lineHeight: 1.65, 
+              whiteSpace: 'pre-wrap',
+              fontWeight: 400,
+              letterSpacing: '-0.01em',
+            }}>
+              {message.content}
+              {isStreaming && <span style={{ opacity: 0.5, marginLeft: 2 }}>▌</span>}
+            </div>
+          ) : (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              color: '#9ca3af',
+              fontSize: '14px',
+            }}>
+              <span style={{
+                display: 'inline-block',
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                background: '#6366f1',
+                animation: 'pulse 1.5s ease-in-out infinite',
+              }} />
+              Thinking...
+            </div>
+          )}
+        </div>
+      )}
       {!isUser && isComplete && <FeedbackIcons />}
     </div>
   );
@@ -501,14 +263,14 @@ function ChatSurface(props: {
   
   const { messages, currentMessage } = useChatMessages();
   const { status, isReady, error } = useChatStatus();
-  const { sendMessage, abortRequest, persistCanvasState } = useChatActions();
+  const { sendMessage, abortRequest, persistAppState } = useChatActions();
   const [input, setInput] = useState('Show me the inline HTML MCP App');
   
   // Handler for MCP App state persistence - forwards to server via HeadlessEmbed
-  const handlePersistState = useCallback((state: Record<string, any>, mcpAppId: string) => {
-    console.log('[ChatSurface] Persisting state for:', mcpAppId, state);
-    persistCanvasState(mcpAppId, state);
-  }, [persistCanvasState]);
+  const handlePersistState = useCallback((state: Record<string, any>, appId: string) => {
+    console.log('[ChatSurface] Persisting state for:', appId, state);
+    persistAppState(appId, state);
+  }, [persistAppState]);
   const [rightTab, setRightTab] = useState<'chat' | 'code'>('chat');
   const debugLogger = useBotDojoChatDebugLogger();
   const debugLoggerRef = useRef(debugLogger);
@@ -822,8 +584,34 @@ import { McpAppHost } from '@botdojo/chat-sdk';
                   Error: {error.message}
                 </div>
               )}
-              <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gap: 14, padding: 12 }}>
-                {messages.length === 0 && (
+              <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', padding: 12 }}>
+                {/* Loading indicator for history */}
+                {status === 'loading' && messages.length === 0 && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '12px',
+                      padding: '32px',
+                      color: '#64748b',
+                      fontSize: '14px',
+                    }}
+                  >
+                    <span style={{
+                      display: 'inline-block',
+                      width: '20px',
+                      height: '20px',
+                      border: '2px solid #e2e8f0',
+                      borderTopColor: '#6366f1',
+                      borderRadius: '50%',
+                      animation: 'spin 0.8s linear infinite',
+                    }} />
+                    Loading conversation...
+                  </div>
+                )}
+                {/* Empty state */}
+                {status !== 'loading' && messages.length === 0 && (
                   <div
                     style={{
                       background: '#f8fafc',
@@ -837,17 +625,20 @@ import { McpAppHost } from '@botdojo/chat-sdk';
                     Ask to see an MCP App. Click the buttons in the app to trigger events!
                   </div>
                 )}
-                {messages.map((msg) => (
-                  <MessageBubble 
-                    key={msg.id} 
-                    message={msg} 
-                    streamingId={currentMessage?.id}
-                    onOpenLink={onOpenLink}
-                    onToolCall={onToolCall}
-                    onUiMessage={onUiMessage}
-                    onPersistState={handlePersistState}
-                  />
-                ))}
+                {/* Messages */}
+                <div style={{ display: 'grid', gap: 14, flex: 1 }}>
+                  {messages.map((msg) => (
+                    <MessageBubble 
+                      key={msg.id} 
+                      message={msg} 
+                      streamingId={currentMessage?.id}
+                      onOpenLink={onOpenLink}
+                      onToolCall={onToolCall}
+                      onUiMessage={onUiMessage}
+                      onPersistState={handlePersistState}
+                    />
+                  ))}
+                </div>
               </div>
               <div
                 style={{
@@ -996,7 +787,6 @@ export default function HeadlessMcpExample() {
     toolPrefix: 'demo',
     uri: 'headless-mcp-demo://context',
     resourceUri: 'headless-mcp-demo://context',
-    prompts: [],
     tools: [
       {
         name: 'show_inline_html_app',
@@ -1018,11 +808,18 @@ export default function HeadlessMcpExample() {
           },
         },
         execute: async (_args: any, context?: ToolExecutionContext) => {
-          context?.notifyToolInputPartial?.({ stepId: 'init', stepLabel: 'Initializing app...' });
-          await new Promise(r => setTimeout(r, 500));
-          context?.notifyToolResult?.({ result: 'Inline HTML App ready' });
-          return [textResult('Here is the inline HTML MCP App. Click the buttons to trigger events!')];
-        },
+          const steps = [
+            { stepId: 'step-1', stepLabel: 'Initializing…', delayMs: 1000 },
+            { stepId: 'step-2', stepLabel: 'Loading app…', delayMs: 1500 },
+            { stepId: 'step-3', stepLabel: 'Ready!', delayMs: 1500 },
+          ];
+          for (const step of steps) {
+            context?.notifyToolInputPartial?.({ stepId: step.stepId, stepLabel: step.stepLabel, kind: 'botdojo-tool-progress' });
+            await new Promise(r => setTimeout(r, step.delayMs));
+          }
+          context?.notifyToolResult?.({ result: 'Remote URL App loaded' });
+          return [textResult('Here is the remote URL MCP App with streaming status!')];
+             },
       },
       {
         name: 'show_remote_url_app',
@@ -1063,15 +860,22 @@ export default function HeadlessMcpExample() {
       {
         uri: 'ui://headless-mcp-demo/html',
         name: 'Inline MCP HTML App',
-        description: 'Demo MCP App with interactive buttons',
-        mimeType: 'text/html+mcp',
-        getContent: async () => ({
-          uri: 'ui://headless-mcp-demo/html',
-          mimeType: 'text/html+mcp',
-          text: INLINE_HTML_APP,
-        }),
+        description: 'Inline MCP Apps HTML resource for ui/message + counter persistence',
+        mimeType: 'text/html;profile=mcp-app',
+        getContent: async () => {
+          // Fetch via API route to avoid webpack caching issues
+          const { fetchMcpAppHtml } = await import('@/utils/fetchMcpApp');
+          const html = await fetchMcpAppHtml('remote-url-app');
+          return {
+            uri: 'ui://headless-mcp-demo/html',
+            mimeType: 'text/html;profile=mcp-app',
+            text: html,
+          };
+        },
       },
+      
     ],
+    prompts: [],
   }), [localOrigin]);
 
   useEffect(() => {
@@ -1264,8 +1068,11 @@ export default function HeadlessMcpExample() {
           0%, 100% { opacity: 1; }
           50% { opacity: 0.6; }
         }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
       `}</style>
     </BotDojoChatProvider>
   );
 }
-

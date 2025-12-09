@@ -281,20 +281,13 @@ NEXT_PUBLIC_BOTDOJO_MODEL_CONTEXT_FLOW_ID=${MODEL_CONTEXT_FLOW_ID}
 NEXT_PUBLIC_BOTDOJO_MODEL_CONTEXT_API=${MODEL_CONTEXT_API_KEY}
 
 # =============================================================================
-# ENVIRONMENT CONFIGURATION
+# OPTIONAL: LOCAL DEVELOPMENT OVERRIDES
 # =============================================================================
-# These are environment/server URLs that can be shared.
-# Default: Local development servers
-
-# BotDojo API URLs
-NEXT_PUBLIC_BOTDOJO_API_URL=http://localhost:5001/api/v1
-NEXT_PUBLIC_BOTDOJO_SOCKET_URL=http://localhost:5001/api/v1/
-
-# Chat iframe URL
-NEXT_PUBLIC_IFRAME_URL=https://localhost:3000
-
-# MCP Server URL
-NEXT_PUBLIC_MCP_SERVER_URL=http://localhost:3500/api/mcp
+# Uncomment these to override production defaults for local development:
+#
+# NEXT_PUBLIC_BOTDOJO_API_URL=http://localhost:5001/api/v1
+# NEXT_PUBLIC_BOTDOJO_SOCKET_URL=http://localhost:5001/api/v1/
+# NEXT_PUBLIC_IFRAME_URL=http://localhost:3000
 EOF
 
 echo -e "${GREEN}✓ .env.local file created${RESET}\n"
@@ -311,12 +304,13 @@ echo -e "  Model Context Flow ID:    ${MODEL_CONTEXT_FLOW_ID}"
 echo -e "  Model Context API Key:    ${MODEL_CONTEXT_API_KEY:0:20}...\n"
 echo -e "${BOLD}Next steps:${RESET}"
 echo -e "  1. Install dependencies:"
-echo -e "     ${CYAN}pnpm install${RESET}\n"
+echo -e "     ${CYAN}npm install${RESET}\n"
 echo -e "  2. Start the development server:"
-echo -e "     ${CYAN}pnpm dev${RESET}\n"
+echo -e "     ${CYAN}npm run dev${RESET}\n"
 echo -e "  3. Open your browser:"
 echo -e "     ${CYAN}http://localhost:3500${RESET}\n"
-echo -e "${YELLOW}Note:${RESET} The .env.local file is configured for local development."
+echo -e "${YELLOW}Note:${RESET} The playground defaults to production BotDojo servers.
+echo -e "      To use local servers, uncomment the overrides in .env.local.
 echo -e "For production, update the API URLs in .env.local.\n"
 echo -e "Happy testing! 🚀\n"
 

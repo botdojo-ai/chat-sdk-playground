@@ -12,7 +12,7 @@ const uiResource = {
   uri: 'ui://weather/dashboard',
   name: 'Weather Dashboard',
   description: 'Interactive weather dashboard',
-  mimeType: 'text/html+mcp',
+  mimeType: 'text/html;profile=mcp-app',
   _meta: {
     ui: {
       csp: {
@@ -28,7 +28,7 @@ const uiResource = {
 {
   contents: [{
     uri: 'ui://weather/dashboard',
-    mimeType: 'text/html+mcp',
+    mimeType: 'text/html;profile=mcp-app',
     text: '<!DOCTYPE html><html>...</html>',
   }]
 }`;
@@ -75,7 +75,7 @@ const sendNotification = (method, params) => {
 const initialize = async () => {
   const initResult = await sendRequest('ui/initialize', {
     protocolVersion: '2025-06-18',
-    capabilities: { extensions: { 'io.modelcontextprotocol/ui': { mimeTypes: ['text/html+mcp'] } } },
+    capabilities: { extensions: { 'io.modelcontextprotocol/ui': { mimeTypes: ['text/html;profile=mcp-app', 'text/html+mcp'] } } },
     clientInfo: { name: 'weather-ui', version: '1.0.0' },
   });
   sendNotification('ui/notifications/initialized', { hostInfo: initResult.hostInfo });
@@ -182,7 +182,7 @@ export default function McpAppsPage() {
         <h2 className="text-xl font-semibold text-slate-900">Key concepts</h2>
         <ul className="list-disc pl-5 space-y-2 text-slate-700">
           <li>Extension identifier: <code className="bg-slate-100 px-1 rounded">io.modelcontextprotocol/ui</code>; negotiate support in <code className="bg-slate-100 px-1 rounded">initialize</code> via <code className="bg-slate-100 px-1 rounded">capabilities.extensions</code>.</li>
-          <li>UI resources use the <code className="bg-slate-100 px-1 rounded">ui://</code> scheme and MIME type <code className="bg-slate-100 px-1 rounded">text/html+mcp</code>; content is served through <code className="bg-slate-100 px-1 rounded">resources/read</code>.</li>
+          <li>UI resources use the <code className="bg-slate-100 px-1 rounded">ui://</code> scheme and MIME type <code className="bg-slate-100 px-1 rounded">text/html;profile=mcp-app</code>; content is served through <code className="bg-slate-100 px-1 rounded">resources/read</code>.</li>
           <li>Tools reference UI via <code className="bg-slate-100 px-1 rounded">_meta['ui/resourceUri']</code>; hosts render that resource when MCP Apps is available and fall back to text otherwise.</li>
           <li>Communication is JSON-RPC 2.0 over <code className="bg-slate-100 px-1 rounded">postMessage</code> between the iframe and host.</li>
         </ul>

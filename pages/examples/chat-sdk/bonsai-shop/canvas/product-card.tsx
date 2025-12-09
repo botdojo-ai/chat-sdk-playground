@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useMcpApp } from 'mcp-app-view/react';
-import { useRouter } from 'next/router';
 
 interface ProductCardData {
   id?: string;
@@ -23,8 +22,7 @@ function ProductCard({ initialData }: { initialData: ProductCardData }) {
     tool,
     sendMessage,
     callTool,
-  } = useMcpApp<{ product?: ProductCardData }>({
-    initialState: { product: initialData },
+  } = useMcpApp({
     containerRef: cardRef,
     autoReportSize: true,
     debug: true,
@@ -35,55 +33,96 @@ function ProductCard({ initialData }: { initialData: ProductCardData }) {
   const [addedToCart, setAddedToCart] = useState(false);
   const [addedTimestamp, setAddedTimestamp] = useState<string | null>(null);
   const [totalAdded, setTotalAdded] = useState(0);
-  const [productData, setProductData] = useState<ProductCardData>(initialData);
+  const [productData, setProductData] = useState<ProductCardData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const fetchedProductIdRef = useRef<string | null>(null);
 
-  const deriveProductData = useCallback((source?: any): Partial<ProductCardData> | null => {
-    if (!source) return null;
-    const data = source.persistedData || source.initialData || source;
-    if (!data) return null;
-    return {
-      id: data.product_id || data.productId || data.id,
-      name: data.name,
-      price: data.price,
-      description: data.description,
-      imagePath: data.imagePath,
-      category: data.category,
-      clickable: data.clickable,
-    };
-  }, []);
+  // Extract product_id from tool arguments
+  // Stringify to detect changes since object reference might not change
+  const toolArgsStr = JSON.stringify(tool.arguments || {});
+  const toolArgs = tool.arguments as { product_id?: string } | null;
+  const toolProductId = toolArgs?.product_id;
 
-  const applyProductData = useCallback((maybeData?: any) => {
-    const next = deriveProductData(maybeData);
-    if (!next) return;
-    setProductData((prev) => {
-      const updated = { ...prev };
-      (Object.keys(next) as Array<keyof ProductCardData>).forEach((key) => {
-        const value = next[key];
-        if (value !== undefined) {
-          updated[key] = value as any;
-        }
-      });
-      return updated;
+  // Debug: log tool state changes
+  useEffect(() => {
+    console.log('[ProductCard] Tool state changed:', {
+      isInitialized,
+      toolName: tool.name,
+      toolStatus: tool.status,
+      toolIsStreaming: tool.isStreaming,
+      toolArgsStr,
+      toolProductId,
+      fetchedProductIdRef: fetchedProductIdRef.current,
     });
-  }, [deriveProductData]);
+  }, [isInitialized, tool.name, tool.status, tool.isStreaming, toolArgsStr, toolProductId]);
 
+  // Fetch product info when we get the product_id from tool arguments
   useEffect(() => {
-    applyProductData(initialData);
-  }, [initialData, applyProductData]);
-
-  // Apply product data from host context
-  useEffect(() => {
-    applyProductData(hostContext);
-  }, [hostContext, applyProductData]);
-
-  // Apply product data from tool arguments (SEP-1865 compliant)
-  useEffect(() => {
-    if (tool.arguments) {
-      applyProductData(tool.arguments);
+    // Extract product_id fresh from the stringified args
+    const args = tool.arguments as { product_id?: string } | null;
+    const productId = args?.product_id;
+    
+    // Wait for initialization
+    if (!isInitialized) {
+      console.log('[ProductCard] Not initialized yet, waiting...');
+      return;
     }
-  }, [tool.arguments, applyProductData]);
+    
+    // Wait for product_id in arguments
+    if (!productId) {
+      console.log('[ProductCard] No product_id in tool.arguments yet, waiting...', args);
+      return;
+    }
+    
+    // Don't re-fetch if we already fetched this product
+    if (fetchedProductIdRef.current === productId) {
+      console.log('[ProductCard] Already fetched product:', productId);
+      return;
+    }
+    
+    // Don't start a new fetch while one is in progress
+    if (loading) {
+      console.log('[ProductCard] Already loading, skipping...');
+      return;
+    }
+
+    console.log('[ProductCard] Fetching product info for:', productId);
+    fetchedProductIdRef.current = productId;
+    setLoading(true);
+
+    callTool<ProductCardData>('getProductInfo', { productId })
+      .then((result) => {
+        console.log('[ProductCard] getProductInfo result:', result);
+        if (result && result.name) {
+          setProductData({
+            id: result.id,
+            name: result.name,
+            price: result.price?.toString() || '0',
+            description: result.description || '',
+            imagePath: result.imagePath,
+            category: result.category,
+            clickable: true,
+          });
+        }
+      })
+      .catch((err) => {
+        console.error('[ProductCard] Error fetching product info:', err);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, [isInitialized, toolArgsStr, callTool, loading]);
 
   const data = productData;
+  const toAbsoluteImage = useCallback((path?: string) => {
+    if (!path) return path;
+    if (/^https?:\/\//i.test(path)) return path;
+    if (typeof window !== 'undefined') {
+      const origin = window.location.origin;
+      return `${origin}${path.startsWith('/') ? path : `/${path}`}`;
+    }
+    return path;
+  }, []);
 
   const categoryEmoji: Record<string, string> = {
     tree: '🌳',
@@ -93,25 +132,25 @@ function ProductCard({ initialData }: { initialData: ProductCardData }) {
   };
 
   const handleAskAI = async () => {
-    if (isInitialized) {
-      try {
-        console.log('[ProductCard] Sending message to flow:', `Tell me more about ${data.name}`);
-        // Use ui/message (SEP-1865 compliant) with BotDojo extension to trigger agent
-        await sendMessage([
-          { 
-            type: 'text', 
-            text: `Tell me more about ${data.name}`,
-            // BotDojo extension: trigger agent to respond to this message
-            'botdojo/triggerAgent': true,
-          }
-        ]);
-      } catch (err) {
-        console.error('[ProductCard] Error sending message:', err);
-      }
+    if (!isInitialized || !data) return;
+    try {
+      console.log('[ProductCard] Sending message to flow:', `Tell me more about ${data.name}`);
+      // Use ui/message (SEP-1865 compliant) with BotDojo extension to trigger agent
+      await sendMessage([
+        { 
+          type: 'text', 
+          text: `Tell me more about ${data.name}`,
+          // BotDojo extension: trigger agent to respond to this message
+          'botdojo/triggerAgent': true,
+        }
+      ]);
+    } catch (err) {
+      console.error('[ProductCard] Error sending message:', err);
     }
   };
 
   const handleAddToCart = async () => {
+    if (!data) return;
     setFeedback('Adding to cart...');
     
     const productId = data.id;
@@ -145,12 +184,12 @@ function ProductCard({ initialData }: { initialData: ProductCardData }) {
     }
   };
 
-  if (!data.name) {
-    return (
-      <div style={{ padding: '16px', textAlign: 'center', color: '#94a3b8' }}>
-        No product data
-      </div>
-    );
+  if (!data || !data.name) {
+    // Determine what state we're in
+    const isLoading = loading || (isInitialized && toolProductId && !data);
+    const isWaitingForInit = !isInitialized;
+    const isWaitingForArgs = isInitialized && !toolProductId && !loading;
+    return <></>;
   }
 
   return (
@@ -165,7 +204,7 @@ function ProductCard({ initialData }: { initialData: ProductCardData }) {
     >
       {data.imagePath ? (
         <img
-          src={data.imagePath}
+          src={toAbsoluteImage(data.imagePath)}
           alt={data.name}
           style={{
             width: '100%',
@@ -370,46 +409,16 @@ function ProductCard({ initialData }: { initialData: ProductCardData }) {
 }
 
 export default function ProductCardPage() {
-  const router = useRouter();
-  const [canvasData, setCanvasData] = useState<ProductCardData | null>(null);
+  // Initial data is empty - all data comes from hostContext and tool.arguments via useMcpApp
+  const initialData: ProductCardData = {
+    name: '',
+    price: '',
+    description: '',
+  };
 
-  useEffect(() => {
-    if (!router.isReady) return;
-
-    const { product_id, name, price, description, imagePath, category, clickable } = router.query;
-
-    const data: ProductCardData = {
-      id: (product_id as string) || undefined,
-      name: (name as string) || '',
-      price: (price as string) || '',
-      description: (description as string) || '',
-      imagePath: (imagePath as string) || undefined,
-      category: (category as string) || undefined,
-      clickable: clickable === 'true'
-    };
-
-    setCanvasData(data);
-  }, [router.isReady, router.query]);
-
-  if (!canvasData) {
-    return (
-      <div style={{ padding: '20px', color: '#94a3b8' }}>
-        <p>Loading product...</p>
-      </div>
-    );
-  }
-
-  // No wrapper needed - useMcpApp handles everything internally
   return (
-    <>
-      <style jsx global>{`
-        html, body {
-          background: transparent !important;
-          margin: 0;
-          padding: 0;
-        }
-      `}</style>
-      <ProductCard initialData={canvasData} />
-    </>
+    <div style={{ margin: 0, padding: 0, overflow: 'hidden', height: '100%', width: '100%', background: 'transparent', display: 'flex', alignItems: 'flex-start' }}>
+      <ProductCard initialData={initialData} />
+    </div>
   );
 }

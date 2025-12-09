@@ -6,7 +6,7 @@
  */
 
 import { useRef } from 'react';
-import { eventBus } from '@/lib/eventBus';
+import { eventBus } from '@/utils/eventBus';
 
 export interface ToolCall {
   name: string;

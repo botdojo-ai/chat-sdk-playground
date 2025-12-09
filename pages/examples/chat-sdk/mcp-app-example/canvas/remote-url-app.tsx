@@ -8,6 +8,9 @@ import { useMcpApp } from 'mcp-app-view/react';
 function McpAppWithHook() {
   const cardRef = useRef<HTMLDivElement>(null);
   
+  // Local state for tool progress (set via onToolInputPartial callback)
+  const [toolProgress, setToolProgress] = useState<Record<string, unknown> | null>(null);
+  
   const {
     isInitialized,
     hostContext,
@@ -19,14 +22,21 @@ function McpAppWithHook() {
   } = useMcpApp({
     containerRef: cardRef,
     autoReportSize: true,
+    onToolInputPartial: (params) => {
+      console.log('[remote-url-app] onToolInputPartial callback:', params);
+      // Check if this is a progress update (kind: 'botdojo-tool-progress')
+      if (params.arguments?.kind === 'botdojo-tool-progress') {
+        setToolProgress(params.arguments);
+      }
+    },
   });
 
   const [busy, setBusy] = useState(false);
   const stepOrder = ['step-1', 'step-2', 'step-3'] as const;
 
   const status = tool.status;
-  const currentStep = tool.arguments as { stepId?: string; stepLabel?: string } | null;
-
+  const currentStep = toolProgress;
+  console.log('toolProgress', toolProgress);
   // Read state from hostContext
 
   const [state, setState] = useState<{ counter?: number } | null>(null);
@@ -95,9 +105,9 @@ function McpAppWithHook() {
     [sendMessage, callTool, openLink, counter],
   );
 
-  const showStreaming = !isInitialized || tool.isStreaming || status === 'streaming';
-  const showComplete = isInitialized && !tool.isStreaming && (status === 'complete' || status === 'idle');
 
+  const showComplete = isInitialized && !tool.isStreaming && (status === 'complete' || status === 'idle');
+  const showStreaming =!showComplete;// !isInitialized || tool.isStreaming || status === 'streaming';
   return (
     <div
       ref={cardRef}
@@ -136,47 +146,50 @@ function McpAppWithHook() {
         )}
       </div>
 
-      {showStreaming && (
-        <div style={{ marginTop: 12, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: 12 }}>
-          <div style={{ fontWeight: 700, marginBottom: 8, fontSize: 13, color: '#475569' }}>
-            {!isInitialized ? 'Initializing...' : 'Running MCP App demo steps…'}
-          </div>
-          {currentStep?.stepId && (
-            <>
-              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${stepOrder.length}, minmax(0,1fr))`, gap: 8 }}>
-                {stepOrder.map((step) => {
-                  const complete = currentStep.stepId && currentStep.stepId > step;
-                  const current = currentStep.stepId === step;
-                  return (
-                    <div
-                      key={step}
-                      style={{
-                        padding: 10,
-                        borderRadius: 8,
-                        border: `1px solid ${complete ? '#6366f1' : '#e2e8f0'}`,
-                        background: current ? '#eef2ff' : '#ffffff',
-                        color: complete ? '#4f46e5' : '#64748b',
-                        fontSize: 12,
-                        textTransform: 'capitalize',
-                      }}
-                    >
-                      {complete ? '✓ ' : ''}{step}
-                    </div>
-                  );
-                })}
-              </div>
-              <div style={{ marginTop: 8, fontSize: 12, color: '#94a3b8' }}>
-                Current status: {currentStep.stepLabel || 'Starting...'}
-              </div>
-            </>
-          )}
-          {!currentStep?.stepId && isInitialized && (
-            <div style={{ fontSize: 12, color: '#94a3b8' }}>
-              Waiting for tool arguments...
+      {showStreaming && (() => {
+        const stepId = currentStep && typeof currentStep.stepId === 'string' ? currentStep.stepId : null;
+        const stepLabel = currentStep && typeof currentStep.stepLabel === 'string' ? currentStep.stepLabel : null;
+        return (
+          <div style={{ marginTop: 12, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: 12 }}>
+            <div style={{ fontWeight: 700, marginBottom: 8, fontSize: 13, color: '#475569' }}>
+              {!isInitialized ? 'Initializing...' : 'Running MCP App demo steps…'}
             </div>
-          )}
-        </div>
-      )}
+            {stepId ? (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${stepOrder.length}, minmax(0,1fr))`, gap: 8 }}>
+                  {stepOrder.map((step) => {
+                    const complete = stepId && stepId > step;
+                    const current = stepId === step;
+                    return (
+                      <div
+                        key={step}
+                        style={{
+                          padding: 10,
+                          borderRadius: 8,
+                          border: `1px solid ${complete ? '#6366f1' : '#e2e8f0'}`,
+                          background: current ? '#eef2ff' : '#ffffff',
+                          color: complete ? '#4f46e5' : '#64748b',
+                          fontSize: 12,
+                          textTransform: 'capitalize',
+                        }}
+                      >
+                        {complete ? '✓ ' : ''}{step}
+                      </div>
+                    );
+                  })}
+                </div>
+                <div style={{ marginTop: 8, fontSize: 12, color: '#94a3b8' }}>
+                  Current status: {stepLabel || 'Starting...'}
+                </div>
+              </>
+            ) : isInitialized ? (
+              <div style={{ fontSize: 12, color: '#94a3b8' }}>
+                Waiting for tool arguments...
+              </div>
+            ) : null}
+          </div>
+        );
+      })()}
 
       {showComplete && (
         <>
@@ -289,6 +302,7 @@ function McpAppWithHook() {
 export default function RemoteUrlAppPage() {
   return (
     <div style={{ margin: 0, padding: 0, overflow: 'hidden', height: '100%', width: '100%', background: '#ffffff', display: 'flex', alignItems: 'flex-start' }}>
+  
       <McpAppWithHook />
     </div>
   );

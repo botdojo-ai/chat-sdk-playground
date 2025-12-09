@@ -28,8 +28,8 @@ Standalone playground for `@botdojo/chat-sdk` + MCP Apps examples. Next.js app w
   - `src/components/layout/ExampleNav.tsx`: Left navigation sidebar
   - `src/components/layout/DebugPanel.tsx`: Right debug panel with event log
   
-- Libraries: `src/lib/`
-  - `src/lib/eventBus.ts`: Centralized event logging system
+- Utilities: `src/utils/`
+  - `src/utils/eventBus.ts`: Centralized event logging system
   
 - Styles: `src/styles/`
   - `src/styles/globals.css`: Global styles and CSS variables
@@ -73,7 +73,7 @@ Standalone playground for `@botdojo/chat-sdk` + MCP Apps examples. Next.js app w
 
 4. **Log events:**
    ```typescript
-   import { eventBus } from '@/lib/eventBus';
+   import { eventBus } from '@/utils/eventBus';
    
    eventBus.logInfo('Something happened', { data: 'value' });
    eventBus.logToken('Hello');
@@ -326,7 +326,7 @@ npm run setup
 
 Check eventBus import:
 ```typescript
-import { eventBus } from '@/lib/eventBus';
+import { eventBus } from '@/utils/eventBus';
 ```
 
 ### Layout breaks on mobile

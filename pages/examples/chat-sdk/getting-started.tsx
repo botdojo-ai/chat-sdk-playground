@@ -6,7 +6,7 @@ import ChatExampleShell from '@/components/layout/ChatExampleShell';
 
 const config = {
   apiKey: process.env.NEXT_PUBLIC_BOTDOJO_SIMPLE_TEST_API || '',
-  baseUrl: process.env.NEXT_PUBLIC_IFRAME_URL || 'http://localhost:3000',
+  baseUrl: process.env.NEXT_PUBLIC_IFRAME_URL || 'https://embed.botdojo.com',
 };
 
 const SDK_INSTALL_STEP = {

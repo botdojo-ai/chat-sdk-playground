@@ -3,7 +3,7 @@ import {
   BotDojoChatDebugProvider,
   BotDojoChatDebugPanel,
   BotDojoChatDebugNav,
-} from '@/lib/BotDojoChatDebug';
+} from '@/utils/BotDojoChatDebug';
 import ExampleNav from './ExampleNav';
 
 interface MainLayoutProps {

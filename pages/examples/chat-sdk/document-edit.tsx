@@ -26,8 +26,8 @@ import {
 } from '@mdxeditor/editor';
 import CodeSnippet from '@/components/CodeSnippet';
 import { Tabs } from '@/components/Tabs';
-import { eventBus } from '@/lib/eventBus';
-import { useBotDojoChatDebugLogger } from '@/lib/BotDojoChatDebug';
+import { eventBus } from '@/utils/eventBus';
+import { useBotDojoChatDebugLogger } from '@/utils/BotDojoChatDebug';
 
 const MDXEditor = dynamic(
   () => import('@mdxeditor/editor').then((mod) => mod.MDXEditor),
@@ -36,7 +36,7 @@ const MDXEditor = dynamic(
 
 const config = {
   apiKey: process.env.NEXT_PUBLIC_BOTDOJO_MODEL_CONTEXT_API || '',
-  baseUrl: process.env.NEXT_PUBLIC_IFRAME_URL || 'http://localhost:3000',
+  baseUrl: process.env.NEXT_PUBLIC_IFRAME_URL || 'https://embed.botdojo.com',
 };
 
 const INITIAL_MARKDOWN = `
@@ -54,17 +54,8 @@ type DiffSuggestion = {
   before: string;
   after: string;
   summary?: string;
-  canvasId: string;
+  appId: string;
   applied?: boolean;
-};
-
-const buildCanvasUrl = (canvasId: string) =>
-  `${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3500'}/examples/chat-sdk/document-edit/canvas/review`;
-
-const estimateCanvasHeight = (before: string, after: string) => {
-  const lines = Math.max(before.split('\n').length, after.split('\n').length);
-  const height = 360 + lines * 12;
-  return `${Math.max(520, Math.min(height, 900))}px`;
 };
 
 export default function UiMcp() {
@@ -77,7 +68,7 @@ export default function UiMcp() {
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null);
   const [selectionText, setSelectionText] = useState<string>('');
   const markdownRef = useRef(markdown);
-  const canvasIdRef = useRef<string | null>(null);
+  const appIdRef = useRef<string | null>(null);
   const debugLogger = useBotDojoChatDebugLogger();
   const debugLoggerRef = useRef(debugLogger);
   const editorContainerRef = useRef<HTMLDivElement | null>(null);
@@ -107,7 +98,7 @@ export default function UiMcp() {
     };
   }, []);
 
-  // Debug: Listen to all postMessage events to trace canvas intents
+  // Debug: Listen to all postMessage events to trace MCP App intents
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       const data = event.data;
@@ -123,218 +114,238 @@ export default function UiMcp() {
     return () => window.removeEventListener('message', handleMessage);
   }, []);
 
-const markdownResource: ModelContextResource = useMemo(() => ({
-  uri: 'ui-mcp://markdown',
-  name: 'Editor Markdown (live)',
-  description: 'Always reflects the latest markdown in the editor (used by cards and tools).',
-  mimeType: 'text/markdown',
-  getContent: async () => markdownRef.current,
-}), []);
-
   const runUpdateMarkdown = useCallback((next: string, source: string) => {
     setMarkdown(next);
-    setEditorVersion((v) => v + 1); // Force MDXEditor remount so canvas-applied changes always render
-    canvasIdRef.current = null;
+    setEditorVersion((v) => v + 1); // Force MDXEditor remount so MCP App-applied changes always render
+    appIdRef.current = null;
     eventBus.logInfo('Markdown updated', { source });
     debugLoggerRef.current?.logInfo('Markdown updated', { source });
     return { success: true, message: 'Markdown updated', source };
   }, []);
 
-  const toolset: ToolDefinition[] = useMemo(() => [
-    {
-      name: 'getMarkdown',
-      description: 'Return the current markdown content for the MCP App card.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          go: {
-            type: 'boolean',
-            description: 'pass true.',
-          },
-        },
-      },
-      execute: async () => {
-        const content = markdownRef.current;
-        eventBus.logInfo('getMarkdown', { length: content.length });
-        debugLoggerRef.current?.logInfo('getMarkdown', { length: content.length });
-        return {
-          markdown: content,
-          resource: markdownResource.uri,
-        };
-      },
-      _meta: { 
-        'botdojo/display-name': 'Get Markdown',
-        'botdojo/hide-step-details': true,
-       },
-    },
-    {
-      name: 'suggestUpdate',
-      description: 'Propose an updated markdown string and show a diff in a BotDojo MCP App.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          updated_markdown: {
-            type: 'string',
-            description: 'The full updated markdown text to propose.',
-          },
-          summary: {
-            type: 'string',
-            description: 'Short note about why the changes are helpful.',
-          },
-        },
-        required: ['updated_markdown'],
-      },
-      _meta: {
-        'botdojo/display-name': 'Suggest Update',
-        ui: {
-          resourceUri: buildCanvasUrl('suggest-update'),
-          prefersProxy: false,
-        },
-      },
-      execute: async (params: { updated_markdown: string; summary?: string }, context?: ToolExecutionContext) => {
-        const before = markdownRef.current;
-        const after = params.updated_markdown;
-        const canvasId = canvasIdRef.current || `ui-mcp-${uuidv4()}`;
-        canvasIdRef.current = canvasId;
-
-        const diffPayload: DiffSuggestion = {
-          before,
-          after,
-          summary: params.summary,
-          canvasId,
-          applied: false,
-        };
-
-        eventBus.logInfo('suggestUpdate', { canvasId, summary: params.summary });
-        debugLoggerRef.current?.logInfo('suggestUpdate', { canvasId });
-
-        // Send diff payload to the canvas via tool input partial
-        context?.notifyToolInputPartial?.({
-          diffPayload,
-        });
-
-        return diffPayload
-      },
-    },
-    {
-      name: 'updateMarkdown',
-      description: 'Apply a markdown string directly to the editor.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          markdown: { type: 'string', description: 'Markdown to set in the editor.' },
-          reason: { type: 'string', description: 'Why this update is being applied.' },
-        },
-        required: ['markdown'],
-      },
-      execute: async (params: { markdown: string; reason?: string }) => {
-        const result = runUpdateMarkdown(params.markdown, 'updateMarkdown tool');
-        return { ...result, reason: params.reason };
-      },
-      _meta: { 'botdojo/display-name': 'Apply Markdown',
-        'botdojo/hide-step-details': true,
-       },
-
-    },
-    {
-      name: 'regexSuggestUpdate',
-      description: 'Apply a regex replacement to the markdown and show the proposed change in an MCP App.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          pattern: { type: 'string', description: 'Regex pattern (JS syntax, no flags)' },
-          replacement: { type: 'string', description: 'Replacement text' },
-          summary: { type: 'string', description: 'Optional summary for the change' },
-        },
-        required: ['pattern', 'replacement'],
-      },
-      _meta: { 'botdojo/display-name': 'Regex Suggest Update',
-        ui: {
-          resourceUri: buildCanvasUrl('regex-suggest-update'),
-          prefersProxy: false,
-        },
-      },
-      execute: async (params: { pattern: string; replacement: string; summary?: string }): Promise<any> => {
-        const before = markdownRef.current;
-        let regex: RegExp;
-        try {
-          regex = new RegExp(params.pattern, 'g');
-        } catch (err) {
-          const message = (err as Error)?.message || 'Invalid regex';
-          eventBus.logError(message);
-          debugLoggerRef.current?.logError(`regexSuggestUpdate invalid regex: ${params.pattern} - ${message}`);
-          return { error: `Invalid regex: ${message}` };
-        }
-
-        const after = before.replace(regex, params.replacement);
-        if (after === before) {
-          return { success: false, message: 'No changes from regex replacement' };
-        }
-
-        const canvasId = canvasIdRef.current || `ui-mcp-${uuidv4()}`;
-        canvasIdRef.current = canvasId;
-
-        const diffPayload: DiffSuggestion = {
-          before,
-          after,
-          summary: params.summary || `Regex replace /${params.pattern}/ → "${params.replacement}"`,
-          canvasId,
-          applied: false,
-        };
-
-    
-        eventBus.logInfo('regexSuggestUpdate', { canvasId, pattern: params.pattern });
-        debugLoggerRef.current?.logInfo('regexSuggestUpdate', { canvasId, pattern: params.pattern });
-
-        return diffPayload
-      },
-  
-    },
-  ], [markdownResource.uri, runUpdateMarkdown]);
-
+  // Define modelContext inline with empty deps (like mcp-app-example.tsx)
+  // This ensures stable reference and avoids timing issues on session reload
   const modelContext: ModelContext = useMemo(() => ({
     name: 'ui_mcp',
     description: 'Frontend MCP that edits markdown via a BotDojo MCP App diff card.',
     toolPrefix: 'ui_mcp',
     uri: 'ui-mcp://context',
-    resourceUri: markdownResource.uri,
-    tools: toolset,
-    resources: [markdownResource],
-  }), [markdownResource, toolset]);
+    resourceUri: 'ui-mcp://markdown',
+    tools: [
+      {
+        name: 'getMarkdown',
+        description: 'Return the current markdown content for the MCP App card.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            go: {
+              type: 'boolean',
+              description: 'pass true.',
+            },
+          },
+        },
+        execute: async () => {
+          const content = markdownRef.current;
+          eventBus.logInfo('getMarkdown', { length: content.length });
+          debugLoggerRef.current?.logInfo('getMarkdown', { length: content.length });
+          return {
+            markdown: content,
+            resource: 'ui-mcp://markdown',
+          };
+        },
+        _meta: { 
+          'botdojo/display-name': 'Get Markdown',
+          'botdojo/hide-step-details': true,
+        },
+      },
+      {
+        name: 'suggestUpdate',
+        description: 'Propose an updated markdown string and show a diff in a BotDojo MCP App.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            updated_markdown: {
+              type: 'string',
+              description: 'The full updated markdown text to propose.',
+            },
+            summary: {
+              type: 'string',
+              description: 'Short note about why the changes are helpful.',
+            },
+          },
+          required: ['updated_markdown'],
+        },
+        _meta: {
+          'botdojo/display-name': 'Suggest Update',
+          ui: {
+            resourceUri: 'ui://ui-mcp/review',
+            prefersProxy: true,
+          },
+        },
+        execute: async (params: { updated_markdown: string; summary?: string }, context?: ToolExecutionContext) => {
+          const before = markdownRef.current;
+          const after = params.updated_markdown;
+          const appId = appIdRef.current || `ui-mcp-${uuidv4()}`;
+          appIdRef.current = appId;
 
-  const handleCanvasIntent = async (intent: string, params: any, canvasId?: string) => {
-    // Extract canvasId from params if not provided separately
-    const actualCanvasId = canvasId || params?.canvasId;
-    console.log('[UiMcp] handleCanvasIntent called:', { 
+          const diffPayload: DiffSuggestion = {
+            before,
+            after,
+            summary: params.summary,
+            appId,
+            applied: false,
+          };
+
+          eventBus.logInfo('suggestUpdate', { appId, summary: params.summary });
+          debugLoggerRef.current?.logInfo('suggestUpdate', { appId });
+
+          // Send diff payload to the MCP App via tool input partial
+          context?.notifyToolInputPartial?.({
+            diffPayload,
+          });
+
+          return diffPayload;
+        },
+      },
+      {
+        name: 'updateMarkdown',
+        description: 'Apply a markdown string directly to the editor.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            markdown: { type: 'string', description: 'Markdown to set in the editor.' },
+            reason: { type: 'string', description: 'Why this update is being applied.' },
+          },
+          required: ['markdown'],
+        },
+        execute: async (params: { markdown: string; reason?: string }) => {
+          setMarkdown(params.markdown);
+          setEditorVersion((v) => v + 1);
+          appIdRef.current = null;
+          eventBus.logInfo('Markdown updated', { source: 'updateMarkdown tool' });
+          debugLoggerRef.current?.logInfo('Markdown updated', { source: 'updateMarkdown tool' });
+          return { success: true, message: 'Markdown updated', source: 'updateMarkdown tool', reason: params.reason };
+        },
+        _meta: { 
+          'botdojo/display-name': 'Apply Markdown',
+          'botdojo/hide-step-details': true,
+        },
+      },
+      {
+        name: 'regexSuggestUpdate',
+        description: 'Apply a regex replacement to the markdown and show the proposed change in an MCP App.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            pattern: { type: 'string', description: 'Regex pattern (JS syntax, no flags)' },
+            replacement: { type: 'string', description: 'Replacement text' },
+            summary: { type: 'string', description: 'Optional summary for the change' },
+          },
+          required: ['pattern', 'replacement'],
+        },
+        _meta: { 
+          'botdojo/display-name': 'Regex Suggest Update',
+          ui: {
+            resourceUri: 'ui://ui-mcp/review',
+            prefersProxy: true,
+          },
+        },
+        execute: async (params: { pattern: string; replacement: string; summary?: string }): Promise<any> => {
+          const before = markdownRef.current;
+          let regex: RegExp;
+          try {
+            regex = new RegExp(params.pattern, 'g');
+          } catch (err) {
+            const message = (err as Error)?.message || 'Invalid regex';
+            eventBus.logError(message);
+            debugLoggerRef.current?.logError(`regexSuggestUpdate invalid regex: ${params.pattern} - ${message}`);
+            return { error: `Invalid regex: ${message}` };
+          }
+
+          const after = before.replace(regex, params.replacement);
+          if (after === before) {
+            return { success: false, message: 'No changes from regex replacement' };
+          }
+
+          const appId = appIdRef.current || `ui-mcp-${uuidv4()}`;
+          appIdRef.current = appId;
+
+          const diffPayload: DiffSuggestion = {
+            before,
+            after,
+            summary: params.summary || `Regex replace /${params.pattern}/ → "${params.replacement}"`,
+            appId,
+            applied: false,
+          };
+
+          eventBus.logInfo('regexSuggestUpdate', { appId, pattern: params.pattern });
+          debugLoggerRef.current?.logInfo('regexSuggestUpdate', { appId, pattern: params.pattern });
+
+          return diffPayload;
+        },
+      },
+    ],
+    resources: [
+      {
+        uri: 'ui-mcp://markdown',
+        name: 'Editor Markdown (live)',
+        description: 'Always reflects the latest markdown in the editor (used by cards and tools).',
+        mimeType: 'text/markdown',
+        getContent: async () => markdownRef.current,
+      },
+      {
+        uri: 'ui://ui-mcp/review',
+        name: 'Review Diff MCP App',
+        description: 'MCP App for reviewing and applying markdown diff suggestions.',
+        mimeType: 'text/html;profile=mcp-app',
+        getContent: async () => {
+          // Fetch via API route to avoid webpack caching issues
+          const { fetchMcpAppHtml } = await import('@/utils/fetchMcpApp');
+          const html = await fetchMcpAppHtml('review-mcp-app');
+          return {
+            uri: 'ui://ui-mcp/review',
+            mimeType: 'text/html;profile=mcp-app',
+            text: html,
+          };
+        },
+      },
+    ],
+    prompts: [],
+  }), []);
+
+  const handleIntent = async (intent: string, params: any, appId?: string) => {
+    // Extract appId from params if not provided separately
+    const actualAppId = appId || params?.appId;
+    console.log('[UiMcp] handleIntent called:', { 
       intent, 
       params, 
-      canvasId: actualCanvasId,
+      appId: actualAppId,
       markdown: params?.markdown?.substring(0, 100)
     });
-    debugLoggerRef.current?.logCanvasIntent(intent, params, actualCanvasId || '');
-    eventBus.logInfo('MCP App intent', { intent, params, canvasId: actualCanvasId }, 'mcp');
+    debugLoggerRef.current?.logCanvasIntent(intent, params, actualAppId || '');
+    eventBus.logInfo('MCP App intent', { intent, params, appId: actualAppId }, 'mcp');
 
     if (intent === 'apply-markdown') {
       const markdownToApply = params?.markdown;
       if (typeof markdownToApply === 'string') {
         const result = await Promise.resolve(runUpdateMarkdown(markdownToApply, 'mcp app intent'));
-        return { ...(result || {}), applied: true, canvasId: actualCanvasId };
+        return { ...(result || {}), applied: true, appId: actualAppId };
       } else {
         return { error: 'missing-markdown' };
       }
     }
 
     if (intent === 'dismiss-suggestion') {
-      canvasIdRef.current = null;
+      appIdRef.current = null;
       return { dismissed: true };
     }
 
     return { ok: true };
   };
 
-  const handleCanvasTool = async (toolName: string, params: any, appId: string): Promise<any> => {
+  const handleToolCall = async (toolName: string, params: any, appId: string): Promise<any> => {
     // Delegate to intent handler for MCP Apps tools/call
-    return handleCanvasIntent(toolName, params, appId);
+    return handleIntent(toolName, params, appId);
   };
 
   const sendPrompt = async (prompt: string) => {
@@ -442,164 +453,65 @@ const markdownResource: ModelContextResource = useMemo(() => ({
 
   const modelContextCode = useMemo(
     () => `
-const markdownResource: ModelContextResource = useMemo(() => ({
-  uri: 'ui-mcp://markdown',
-  name: 'Editor Markdown (live)',
-  description: 'Always reflects the latest markdown in the editor (used by cards and tools).',
-  mimeType: 'text/markdown',
-  getContent: async () => markdownRef.current,
-}), []);
-
-const toolset: ToolDefinition[] = useMemo(() => [
-  {
-    name: 'getMarkdown',
-    description: 'Return the current markdown content for the MCP App card.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        go: {
-          type: 'boolean',
-          description: 'pass true.',
-        },
-      },
-    },
-    execute: async () => {
-      const content = markdownRef.current;
-      return {
-        markdown: content,
-        resource: markdownResource.uri,
-      };
-    },
-    _meta: { 
-      'botdojo/display-name': 'Get Markdown',
-      'botdojo/hide-step-details': true,
-    },
-  },
-  {
-    name: 'suggestUpdate',
-    description: 'Propose an updated markdown string and show a diff in a BotDojo MCP App.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        updated_markdown: {
-          type: 'string',
-          description: 'The full updated markdown text to propose.',
-        },
-        summary: {
-          type: 'string',
-          description: 'Short note about why the changes are helpful.',
-        },
-      },
-      required: ['updated_markdown'],
-    },
-    _meta: {
-      'botdojo/display-name': 'Suggest Update',
-      ui: {
-        resourceUri: buildCanvasUrl('suggest-update'),
-        prefersProxy: false,
-      },
-    },
-    execute: async (params: { updated_markdown: string; summary?: string }, context?: ToolExecutionContext) => {
-      const before = markdownRef.current;
-      const after = params.updated_markdown;
-      const canvasId = canvasIdRef.current || \`ui-mcp-\${uuidv4()}\`;
-      canvasIdRef.current = canvasId;
-
-      const diffPayload: DiffSuggestion = {
-        before,
-        after,
-        summary: params.summary,
-        canvasId,
-        applied: false,
-      };
-
-      // Send diff payload to the canvas via tool input partial
-      context?.notifyToolInputPartial?.({
-        diffPayload,
-      });
-
-      return diffPayload;
-    },
-  },
-  {
-    name: 'updateMarkdown',
-    description: 'Apply a markdown string directly to the editor.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        markdown: { type: 'string', description: 'Markdown to set in the editor.' },
-        reason: { type: 'string', description: 'Why this update is being applied.' },
-      },
-      required: ['markdown'],
-    },
-    execute: async (params: { markdown: string; reason?: string }) => {
-      const result = runUpdateMarkdown(params.markdown, 'updateMarkdown tool');
-      return { ...result, reason: params.reason };
-    },
-    _meta: { 
-      'botdojo/display-name': 'Apply Markdown',
-      'botdojo/hide-step-details': true,
-    },
-  },
-  {
-    name: 'regexSuggestUpdate',
-    description: 'Apply a regex replacement to the markdown and show the proposed change in an MCP App.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        pattern: { type: 'string', description: 'Regex pattern (JS syntax, no flags)' },
-        replacement: { type: 'string', description: 'Replacement text' },
-        summary: { type: 'string', description: 'Optional summary for the change' },
-      },
-      required: ['pattern', 'replacement'],
-    },
-    _meta: { 
-      'botdojo/display-name': 'Regex Suggest Update',
-      ui: {
-        resourceUri: buildCanvasUrl('regex-suggest-update'),
-        prefersProxy: false,
-      },
-    },
-    execute: async (params: { pattern: string; replacement: string; summary?: string }): Promise<any> => {
-      const before = markdownRef.current;
-      let regex: RegExp;
-      try {
-        regex = new RegExp(params.pattern, 'g');
-      } catch (err) {
-        const message = (err as Error)?.message || 'Invalid regex';
-        return { error: \`Invalid regex: \${message}\` };
-      }
-
-      const after = before.replace(regex, params.replacement);
-      if (after === before) {
-        return { success: false, message: 'No changes from regex replacement' };
-      }
-
-      const canvasId = canvasIdRef.current || \`ui-mcp-\${uuidv4()}\`;
-      canvasIdRef.current = canvasId;
-
-      const diffPayload: DiffSuggestion = {
-        before,
-        after,
-        summary: params.summary || \`Regex replace /\${params.pattern}/ → "\${params.replacement}"\`,
-        canvasId,
-        applied: false,
-      };
-
-      return diffPayload;
-    },
-  },
-], [markdownResource.uri, runUpdateMarkdown]);
-
+// Define modelContext inline with empty deps for stable reference
 const modelContext: ModelContext = useMemo(() => ({
   name: 'ui_mcp',
   description: 'Frontend MCP that edits markdown via a BotDojo MCP App diff card.',
   toolPrefix: 'ui_mcp',
   uri: 'ui-mcp://context',
-  resourceUri: markdownResource.uri,
-  tools: toolset,
-  resources: [markdownResource],
-}), [markdownResource, toolset]);
+  resourceUri: 'ui-mcp://markdown',
+  tools: [
+    {
+      name: 'suggestUpdate',
+      description: 'Propose an updated markdown string and show a diff in a BotDojo MCP App.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          updated_markdown: { type: 'string', description: 'The full updated markdown text.' },
+          summary: { type: 'string', description: 'Short note about why the changes are helpful.' },
+        },
+        required: ['updated_markdown'],
+      },
+      _meta: {
+        'botdojo/display-name': 'Suggest Update',
+        ui: {
+          resourceUri: 'ui://ui-mcp/review',  // References the review resource
+          prefersProxy: true,
+        },
+      },
+      execute: async (params, context) => {
+        const diffPayload = { before: markdownRef.current, after: params.updated_markdown, ... };
+        context?.notifyToolInputPartial?.({ diffPayload });
+        return diffPayload;
+      },
+    },
+    // ... other tools
+  ],
+  resources: [
+    {
+      uri: 'ui-mcp://markdown',
+      name: 'Editor Markdown (live)',
+      mimeType: 'text/markdown',
+      getContent: async () => markdownRef.current,
+    },
+    {
+      uri: 'ui://ui-mcp/review',
+      name: 'Review Diff MCP App',
+      mimeType: 'text/html;profile=mcp-app',
+      getContent: async () => {
+        // Fetch via API route to avoid webpack caching issues
+        const { fetchMcpAppHtml } = await import('@/utils/fetchMcpApp');
+        const html = await fetchMcpAppHtml('review');
+        return {
+          uri: 'ui://ui-mcp/review',
+          mimeType: 'text/html;profile=mcp-app',
+          text: html,
+        };
+      },
+    },
+  ],
+  prompts: [],
+}), []);  // Empty deps = stable reference
 `,
     [],
   );
@@ -775,14 +687,14 @@ const modelContext: ModelContext = useMemo(() => ({
                   newSession={newSession}
                   modelContext={modelContext}
                   onBotDojoChatControl={setChatControl}
-                  onToolCall={handleCanvasTool}
+                  onToolCall={handleToolCall}
                   onUiMessage={(message: string, params: any, appId: string) => {
                     debugLoggerRef.current?.logCanvasNotify(message, params, appId);
-                    eventBus.logInfo('MCP App notify', { message, params, canvasId: appId }, 'mcp');
+                    eventBus.logInfo('MCP App notify', { message, params, appId }, 'mcp');
                   }}
                   onOpenLink={(url: string, target: string, appId: string) => {
                     debugLoggerRef.current?.logCanvasLink(url, target, appId);
-                    eventBus.logInfo('MCP App link', { url, target, canvasId: appId }, 'mcp');
+                    eventBus.logInfo('MCP App link', { url, target, appId }, 'mcp');
                   }}
                   hideBotIcon={true}
                   sessionKeyPrefix="edit-document"

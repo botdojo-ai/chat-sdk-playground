@@ -1,14 +1,26 @@
 // Configuration for sdk-playground
-// Set these in your .env.local file or they will use defaults
+// API keys are set in .env.local, URLs default to production
+
+// Production defaults
+const PROD_IFRAME_URL = 'https://embed.botdojo.com';
+const PROD_API_URL = 'https://api.botdojo.com/api/v1';
 
 export const config = {
   // URL for the embedded iframe (BotDojo web app)
-  iframeUrl: process.env.NEXT_PUBLIC_IFRAME_URL || 'http://localhost:3000',
+  // Override with NEXT_PUBLIC_IFRAME_URL for local dev
+  iframeUrl: process.env.NEXT_PUBLIC_IFRAME_URL || PROD_IFRAME_URL,
+  
+  // Base URL for the chat embed iframe (alias for iframeUrl)
+  baseUrl: process.env.NEXT_PUBLIC_IFRAME_URL || PROD_IFRAME_URL,
   
   // Base URL for API calls
-  baseUrl: process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000',
+  // Override with NEXT_PUBLIC_BOTDOJO_API_URL for local dev
+  apiUrl: process.env.NEXT_PUBLIC_BOTDOJO_API_URL || PROD_API_URL,
+  
+  // Socket URL for real-time updates
+  // Override with NEXT_PUBLIC_BOTDOJO_SOCKET_URL for local dev
+  socketUrl: process.env.NEXT_PUBLIC_BOTDOJO_SOCKET_URL || PROD_API_URL,
   
   // API key for BotDojo Chat SDK with Model Context
-  // This is the key that supports model context and MCP tools
   apiKey: process.env.NEXT_PUBLIC_BOTDOJO_MODEL_CONTEXT_API || '',
 };

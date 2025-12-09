@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useMcpApp } from 'mcp-app-view/react';
-import { useRouter } from 'next/router';
 
 interface CartItem {
   id: string;
@@ -29,8 +28,7 @@ function Cart({ initialData }: { initialData: CartData }) {
     openLink,
     callTool,
     sendMessage,
-  } = useMcpApp<{ cart?: CartData }>({
-    initialState: { cart: initialData },
+  } = useMcpApp({
     containerRef: cardRef,
     autoReportSize: true,
     debug: true,
@@ -38,51 +36,73 @@ function Cart({ initialData }: { initialData: CartData }) {
 
   const [checkoutPending, setCheckoutPending] = useState(false);
   const [removingItemId, setRemovingItemId] = useState<string | null>(null);
-  const [cartData, setCartData] = useState<CartData>(initialData);
+  const [cartData, setCartData] = useState<CartData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const hasFetchedRef = useRef(false);
 
-  const deriveCartData = useCallback((source?: any): Partial<CartData> | null => {
-    if (!source) return null;
-    const data = source.persistedData || source.initialData || source;
-    if (!data) return null;
-    return {
-      items: data.items,
-      total: data.total,
-    };
-  }, []);
+  // Track tool.arguments changes via stringification
+  const toolArgsStr = JSON.stringify(tool.arguments || {});
+  const toolArgs = tool.arguments as { fetchCart?: boolean } | null;
 
-  const applyCartData = useCallback((maybeData?: any) => {
-    const next = deriveCartData(maybeData);
-    if (!next) return;
-    setCartData((prev) => {
-      const updated: CartData = { ...prev };
-      (Object.keys(next) as Array<keyof CartData>).forEach((key) => {
-        const value = next[key];
-        if (value !== undefined) {
-          updated[key] = value as any;
-        }
-      });
-      return updated;
+  // Debug: log tool state changes
+  useEffect(() => {
+    console.log('[Cart] Tool state changed:', {
+      isInitialized,
+      toolArgsStr,
+      hasFetched: hasFetchedRef.current,
     });
-  }, [deriveCartData]);
+  }, [isInitialized, toolArgsStr]);
 
+  // Fetch cart data via tools/call when we get the fetchCart signal
   useEffect(() => {
-    applyCartData(initialData);
-  }, [initialData, applyCartData]);
-
-  // Apply cart data from host context
-  useEffect(() => {
-    applyCartData(hostContext);
-  }, [hostContext, applyCartData]);
-
-  // Apply cart data from tool arguments (SEP-1865 compliant)
-  useEffect(() => {
-    if (tool.arguments) {
-      applyCartData(tool.arguments);
+    const args = tool.arguments as { fetchCart?: boolean } | null;
+    
+    if (!isInitialized) {
+      console.log('[Cart] Not initialized yet, waiting...');
+      return;
     }
-  }, [tool.arguments, applyCartData]);
+    
+    // Previously we waited for fetchCart; to avoid “stuck loading”, fetch once on init or signal.
+    if (!args?.fetchCart && hasFetchedRef.current) {
+      return;
+    }
+    
+    if (hasFetchedRef.current) {
+      console.log('[Cart] Already fetched cart');
+      return;
+    }
+    
+    if (loading) {
+      console.log('[Cart] Already loading, skipping...');
+      return;
+    }
 
-  const data = cartData || {};
-  const items: CartItem[] = data.items || [];
+    console.log('[Cart] Fetching cart data via getCart');
+    hasFetchedRef.current = true;
+    setLoading(true);
+    
+    callTool<{ items: CartItem[]; total: number; itemCount: number }>('getCart')
+      .then((result) => {
+        console.log('[Cart] getCart result:', result);
+        if (result?.items) {
+          setCartData({
+            items: result.items,
+            total: result.total?.toString(),
+          });
+        } else {
+          setCartData({ items: [] });
+        }
+      })
+      .catch((err) => {
+        console.error('[Cart] Error fetching cart:', err);
+        setCartData({ items: [] });
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, [isInitialized, toolArgsStr, callTool, loading]);
+
+  const items: CartItem[] = cartData?.items || [];
   
   const total = items.reduce((sum, item) => {
     return sum + (item.price * item.quantity);
@@ -142,17 +162,58 @@ function Cart({ initialData }: { initialData: CartData }) {
     setTimeout(() => setRemovingItemId(null), 3000);
   };
 
-  if (items.length === 0) {
+  if (!cartData || items.length === 0) {
     return (
-      <div style={{ 
-        padding: '24px', 
-        textAlign: 'center', 
-        color: '#94a3b8',
-        border: '1px solid #334155',
-        borderRadius: '8px',
-        backgroundColor: 'transparent'
-      }}>
-        <p style={{ margin: 0, fontSize: '14px' }}>Your cart is empty</p>
+      <div 
+        ref={cardRef}
+        style={{ 
+          padding: '24px', 
+          textAlign: 'center', 
+          color: '#94a3b8',
+          border: '1px solid #334155',
+          borderRadius: '8px',
+          backgroundColor: 'transparent'
+        }}
+      >
+        {loading || (!cartData && isInitialized) ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+            <div style={{
+              width: '24px',
+              height: '24px',
+              border: '2px solid #334155',
+              borderTopColor: '#10b981',
+              borderRadius: '50%',
+              animation: 'spin 0.8s linear infinite',
+            }} />
+            <span>Loading cart...</span>
+            <style>{`
+              @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+              }
+            `}</style>
+          </div>
+        ) : !isInitialized ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+            <div style={{
+              width: '24px',
+              height: '24px',
+              border: '2px solid #334155',
+              borderTopColor: '#f59e0b',
+              borderRadius: '50%',
+              animation: 'spin 0.8s linear infinite',
+            }} />
+            <span>Initializing...</span>
+            <style>{`
+              @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+              }
+            `}</style>
+          </div>
+        ) : (
+          <p style={{ margin: 0, fontSize: '14px' }}>Your cart is empty</p>
+        )}
       </div>
     );
   }
@@ -369,41 +430,14 @@ function Cart({ initialData }: { initialData: CartData }) {
 }
 
 export default function CartPage() {
-  const router = useRouter();
-  const [canvasData, setCanvasData] = useState<CartData | null>(null);
+  // Initial data is empty - all data comes from hostContext and tool.arguments via useMcpApp
+  const initialData: CartData = {
+    items: [],
+  };
 
-  useEffect(() => {
-    if (!router.isReady) return;
-
-    const { items, total } = router.query;
-
-    const data: CartData = {
-      items: items ? JSON.parse(items as string) : [],
-      total: (total as string) || undefined
-    };
-
-    setCanvasData(data);
-  }, [router.isReady, router.query]);
-
-  if (!canvasData) {
-    return (
-      <div style={{ padding: '20px', color: '#94a3b8' }}>
-        <p>Loading cart...</p>
-      </div>
-    );
-  }
-
-  // No wrapper needed - useMcpApp handles everything internally
   return (
-    <>
-      <style jsx global>{`
-        html, body {
-          background: transparent !important;
-          margin: 0;
-          padding: 0;
-        }
-      `}</style>
-      <Cart initialData={canvasData} />
-    </>
+    <div style={{ margin: 0, padding: 0, overflow: 'hidden', height: '100%', width: '100%', background: 'transparent', display: 'flex', alignItems: 'flex-start' }}>
+      <Cart initialData={initialData} />
+    </div>
   );
 }

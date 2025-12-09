@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { BotDojoChat } from '@botdojo/chat-sdk';
 import type { BotDojoChatControl, ModelContext } from '@botdojo/chat-sdk';
-import { eventBus } from '@/lib/eventBus';
-import { useBotDojoChatDebugLogger } from '@/lib/BotDojoChatDebug';
+import { eventBus } from '@/utils/eventBus';
+import { useBotDojoChatDebugLogger } from '@/utils/BotDojoChatDebug';
 import CodeSnippet from '@/components/CodeSnippet';
 import { Tabs } from '@/components/Tabs';
 
-// Configuration
+// Configuration - defaults to production
 const config = {
   apiKey: process.env.NEXT_PUBLIC_BOTDOJO_SIMPLE_TEST_API || '',
-  baseUrl: process.env.NEXT_PUBLIC_IFRAME_URL || 'http://localhost:3000',
+  baseUrl: process.env.NEXT_PUBLIC_IFRAME_URL || 'https://embed.botdojo.com',
 };
 
 /**
@@ -122,9 +122,9 @@ export default function ChatSDKBasic() {
   // Define model context with simple tools
   const modelContext: ModelContext = {
     name: 'test_page',
-    uri: 'test-page://context',
     description: 'Test page for BotDojo Chat SDK',
     toolPrefix: 'test_page',
+    uri: 'test-page://context',
     resourceUri: 'test-page://context',
     tools: [
       {

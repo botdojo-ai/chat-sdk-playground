@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter } from 'next/router';
-import { McpUiHostContext } from '@botdojo/sdk-types';
+
+
 
 type ReviewPayload = {
   before: string;
@@ -68,6 +68,8 @@ function NativeReviewCard() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isStreaming, setIsStreaming] = useState(true);
   const [hostInfo, setHostInfo] = useState<any>(null);
+  // Separate state for tool progress updates (from notifyToolInputPartial with kind: 'botdojo-tool-progress')
+  const [toolProgress, setToolProgress] = useState<Record<string, unknown> | null>(null);
   
   const cardRef = useRef<HTMLDivElement | null>(null);
   const pendingRequests = useRef<Map<string | number, PendingRequest>>(new Map());
@@ -140,7 +142,7 @@ function NativeReviewCard() {
         switch (method) {
           case 'ui/initialize': {
             setHostInfo(params?.hostInfo || params?.appInfo || null);
-            const hostContext: McpUiHostContext = params?.hostContext || {};
+            const hostContext: any = params?.hostContext || {};
             const state = hostContext.state || {};
             const toolInfo = hostContext.toolInfo;
             
@@ -181,11 +183,43 @@ function NativeReviewCard() {
 
       // Handle notifications from host
       switch (method) {
-        case 'ui/notifications/tool-input':
-        case 'ui/notifications/tool-input-partial': {
+        case 'ui/notifications/tool-input': {
+          // Final tool arguments from LLM (streaming complete, execution starting)
           log(`tool-input ${JSON.stringify(params?.arguments)}`);
-          // Check for diffPayload in arguments (from notifyToolInputPartial)
           const args = params?.arguments || {};
+          const derived = args.diffPayload
+            ? derivePayload(args.diffPayload, null)
+            : derivePayload(args, null);
+          if (derived) {
+            // Don't overwrite an already-applied payload with stale data from session
+            setPayload((prev) => {
+              if (prev?.applied && !derived.applied) {
+                log('Preserving already-applied state, ignoring stale tool-input');
+                return prev;
+              }
+              return derived;
+            });
+            setStatus((prevStatus) => {
+              if (prevStatus === 'Already applied.') return prevStatus;
+              return derived.applied ? 'Already applied.' : 'New suggestion received.';
+            });
+          }
+          break;
+        }
+        case 'ui/notifications/tool-input-partial': {
+          log(`tool-input-partial ${JSON.stringify(params?.arguments)}`);
+          const args = params?.arguments || {};
+          
+          // Check for _botdojoProgress marker to distinguish progress updates from actual arguments
+          if (args._botdojoProgress) {
+            // Progress update from tool execution - store in toolProgress, don't update payload
+            const { _botdojoProgress, ...progressData } = args;
+            log(`tool-input-partial: progress update ${JSON.stringify(progressData)}`);
+            setToolProgress(progressData);
+            break;
+          }
+          
+          // Regular tool-input-partial with diff payload (from notifyToolInputPartial)
           const derived = args.diffPayload
             ? derivePayload(args.diffPayload, null)
             : derivePayload(args, null);
@@ -195,7 +229,7 @@ function NativeReviewCard() {
             // already loaded persisted state (with applied: true) from ui/initialize
             setPayload((prev) => {
               if (prev?.applied && !derived.applied) {
-                log('Preserving already-applied state, ignoring stale tool-input');
+                log('Preserving already-applied state, ignoring stale tool-input-partial');
                 return prev;
               }
               return derived;
@@ -210,6 +244,8 @@ function NativeReviewCard() {
         }
         case 'ui/notifications/tool-result':
           log(`tool-result ${JSON.stringify(params?.result)}`);
+          // Clear toolProgress when tool completes (matches useMcpApp behavior)
+          setToolProgress(null);
           setIsStreaming(false);
           if (payload) {
             setStatus(payload.applied ? 'Already applied.' : 'Review and apply the suggested update.');
@@ -445,7 +481,7 @@ function NativeReviewCard() {
 }
 
 export default function ReviewNativeCanvasPage() {
-  const router = useRouter();
+
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {

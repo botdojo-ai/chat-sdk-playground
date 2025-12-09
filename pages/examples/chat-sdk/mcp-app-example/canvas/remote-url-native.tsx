@@ -21,6 +21,10 @@ function NativeMcpCanvas() {
     stepId: string;
     stepLabel: string;
   } | undefined>(undefined);
+  // Separate state for tool progress updates (from notifyToolInputPartial with kind: 'botdojo-tool-progress')
+  const [toolProgress, setToolProgress] = useState<Record<string, unknown> | null>(null);
+  // Separate state for final tool arguments (from tool-input when LLM streaming completes)
+  const [toolArguments, setToolArguments] = useState<Record<string, unknown> | null>(null);
   const [status, setStatus] = useState<'starting' | 'streaming' | 'complete' | 'error' | 'teardown'>('streaming');
   const cardRef = useRef<HTMLDivElement | null>(null);
   const stepOrder = ['step-1', 'step-2', 'step-3', 'step-4'] as const;
@@ -134,18 +138,32 @@ function NativeMcpCanvas() {
       // Notifications from host
       switch (method) {
         case 'ui/notifications/tool-input':
+          // Final tool arguments from LLM (streaming complete, execution starting)
           log(`tool-input ${JSON.stringify(params.arguments)}`);
+          setToolArguments(params.arguments || null);
           setStatus('streaming');
           break;
-        case 'ui/notifications/tool-input-partial':
+        case 'ui/notifications/tool-input-partial': {
           log(`tool-input-partial ${JSON.stringify(params)}`);
-          if(params?.arguments?.stepId) {
-            setCurrentStep({ stepId: params.arguments.stepId, stepLabel: params.arguments.stepLabel });
+          const args = params?.arguments || {};
+          
+          // Check for _botdojoProgress marker to distinguish progress updates from step metadata
+          if (args._botdojoProgress) {
+            // Progress update from tool execution - store in toolProgress, not currentStep
+            const { _botdojoProgress, ...progressData } = args;
+            log(`tool-input-partial: progress update ${JSON.stringify(progressData)}`);
+            setToolProgress(progressData);
+          } else if (args.stepId || args.stepLabel) {
+            // LLM streaming metadata (stepId/stepLabel during argument streaming)
+            setCurrentStep({ stepId: args.stepId, stepLabel: args.stepLabel });
           }
           setStatus('streaming');
           break;
+        }
         case 'ui/notifications/tool-result':
           log(`tool-result ${JSON.stringify(params.result)}`);
+          // Clear toolProgress when tool completes (matches useMcpApp behavior)
+          setToolProgress(null);
           setStatus('complete');
           break;
         case 'ui/resource-teardown':
@@ -296,7 +314,7 @@ function NativeMcpCanvas() {
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <div>
-          <div style={{ fontWeight: 800, fontSize: 18, color: '#0f172a' }}>MCP App Remote Url</div>
+          <div style={{ fontWeight: 800, fontSize: 18, color: '#0f172a' }}>MCP App Remote Url </div>
          
         </div>
       </div>

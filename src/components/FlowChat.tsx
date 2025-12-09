@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { eventBus } from '@/lib/eventBus';
+import { eventBus } from '@/utils/eventBus';
 import { processFlowStream, type ToolCall, type Step } from '@/hooks/useFlowStream';
 
 const SESSION_STORAGE_KEY = 'botdojo_chat_session_id';

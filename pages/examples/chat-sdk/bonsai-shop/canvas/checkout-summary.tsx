@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useMcpApp } from 'mcp-app-view/react';
-import { useRouter } from 'next/router';
 
 interface CartItem {
   id: string;
@@ -28,65 +27,101 @@ function CheckoutSummary({ initialData }: { initialData: CheckoutData }) {
     hostContext,
     tool,
     openLink,
-  } = useMcpApp<{ checkout?: CheckoutData }>({
-    initialState: { checkout: initialData },
+    callTool,
+  } = useMcpApp({
     containerRef: cardRef,
     autoReportSize: true,
     debug: true,
   });
 
   const [checkoutPending, setCheckoutPending] = useState(false);
-  const [checkoutData, setCheckoutData] = useState<CheckoutData>(initialData);
+  const [checkoutData, setCheckoutData] = useState<CheckoutData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const hasFetchedRef = useRef(false);
 
-  const deriveCheckoutData = useCallback((source?: any): Partial<CheckoutData> | null => {
-    if (!source) return null;
-    const data = source.persistedData || source.initialData || source;
-    if (!data) return null;
-    return {
-      items: data.items,
-      total: data.total,
-      itemCount: data.itemCount,
-    };
-  }, []);
+  // Track tool.arguments changes via stringification
+  const toolArgsStr = JSON.stringify(tool.arguments || {});
 
-  const applyCheckoutData = useCallback((maybeData?: any) => {
-    const next = deriveCheckoutData(maybeData);
-    if (!next) return;
-    setCheckoutData((prev) => {
-      const updated: CheckoutData = { ...prev };
-      (Object.keys(next) as Array<keyof CheckoutData>).forEach((key) => {
-        const value = next[key];
-        if (value !== undefined) {
-          updated[key] = value as any;
-        }
-      });
-      return updated;
+  // Debug: log tool state changes
+  useEffect(() => {
+    console.log('[CheckoutSummary] Tool state changed:', {
+      isInitialized,
+      toolArgsStr,
+      hasFetched: hasFetchedRef.current,
     });
-  }, [deriveCheckoutData]);
+  }, [isInitialized, toolArgsStr]);
 
+  // Fetch cart data via tools/call when we get the fetchCart signal
   useEffect(() => {
-    applyCheckoutData(initialData);
-  }, [initialData, applyCheckoutData]);
-
-  // Apply checkout data from host context
-  useEffect(() => {
-    applyCheckoutData(hostContext);
-  }, [hostContext, applyCheckoutData]);
-
-  // Apply checkout data from tool arguments (SEP-1865 compliant)
-  useEffect(() => {
-    if (tool.arguments) {
-      applyCheckoutData(tool.arguments);
+    const args = tool.arguments as { fetchCart?: boolean } | null;
+    
+    if (!isInitialized) {
+      console.log('[CheckoutSummary] Not initialized yet, waiting...');
+      return;
     }
-  }, [tool.arguments, applyCheckoutData]);
+    
+    if (!args?.fetchCart) {
+      console.log('[CheckoutSummary] No fetchCart signal yet, waiting...', args);
+      return;
+    }
+    
+    if (hasFetchedRef.current) {
+      console.log('[CheckoutSummary] Already fetched cart');
+      return;
+    }
+    
+    if (loading) {
+      console.log('[CheckoutSummary] Already loading, skipping...');
+      return;
+    }
 
-  const data = checkoutData || {};
-  const items: CartItem[] = data.items || [];
-  const itemCount = data.itemCount || items.length;
+    console.log('[CheckoutSummary] Fetching cart data via getCart');
+    hasFetchedRef.current = true;
+    setLoading(true);
+    
+    callTool<{ items: CartItem[]; total: number; itemCount: number }>('getCart')
+      .then((result) => {
+        console.log('[CheckoutSummary] getCart result:', result);
+        if (result?.items) {
+          setCheckoutData({
+            items: result.items,
+            total: result.total?.toString(),
+            itemCount: result.itemCount,
+          });
+        } else {
+          setCheckoutData({ items: [] });
+        }
+      })
+      .catch((err) => {
+        console.error('[CheckoutSummary] Error fetching cart:', err);
+        setCheckoutData({ items: [] });
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, [isInitialized, toolArgsStr, callTool, loading]);
+
+  const items: CartItem[] = checkoutData?.items || [];
+  const itemCount = checkoutData?.itemCount || items.length;
   
   const total = items.length > 0 
     ? items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
-    : parseFloat(data.total || '0');
+    : parseFloat(checkoutData?.total || '0');
+
+  const toAbsoluteImage = useCallback((path?: string) => {
+    if (!path) return path;
+    if (/^https?:\/\//i.test(path)) return path;
+    if (typeof window !== 'undefined') {
+      const origin = window.location.origin;
+      return `${origin}${path.startsWith('/') ? path : `/${path}`}`;
+    }
+    return path;
+  }, []);
+
+  const itemsWithAbsoluteImages = items.map(item => ({
+    ...item,
+    imagePath: toAbsoluteImage(item.imagePath),
+  }));
 
   const handleProceedToCheckout = async () => {
     const checkoutUrl = '/examples/chat-sdk/bonsai-shop/checkout';
@@ -100,17 +135,58 @@ function CheckoutSummary({ initialData }: { initialData: CheckoutData }) {
     }
   };
 
-  if (items.length === 0 && !data.total) {
+  if (!checkoutData || (items.length === 0 && !checkoutData.total)) {
     return (
-      <div style={{ 
-        padding: '24px', 
-        textAlign: 'center', 
-        color: '#94a3b8',
-        border: '1px solid #334155',
-        borderRadius: '8px',
-        backgroundColor: 'transparent'
-      }}>
-        <p style={{ margin: 0, fontSize: '14px' }}>Your cart is empty</p>
+      <div 
+        ref={cardRef}
+        style={{ 
+          padding: '24px', 
+          textAlign: 'center', 
+          color: '#94a3b8',
+          border: '1px solid #334155',
+          borderRadius: '8px',
+          backgroundColor: 'transparent'
+        }}
+      >
+        {loading || (!checkoutData && isInitialized) ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+            <div style={{
+              width: '24px',
+              height: '24px',
+              border: '2px solid #334155',
+              borderTopColor: '#10b981',
+              borderRadius: '50%',
+              animation: 'spin 0.8s linear infinite',
+            }} />
+            <span>Loading checkout...</span>
+            <style>{`
+              @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+              }
+            `}</style>
+          </div>
+        ) : !isInitialized ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+            <div style={{
+              width: '24px',
+              height: '24px',
+              border: '2px solid #334155',
+              borderTopColor: '#f59e0b',
+              borderRadius: '50%',
+              animation: 'spin 0.8s linear infinite',
+            }} />
+            <span>Initializing...</span>
+            <style>{`
+              @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+              }
+            `}</style>
+          </div>
+        ) : (
+          <p style={{ margin: 0, fontSize: '14px' }}>Your cart is empty</p>
+        )}
       </div>
     );
   }
@@ -137,9 +213,9 @@ function CheckoutSummary({ initialData }: { initialData: CheckoutData }) {
         💳 Ready to Checkout
       </h3>
 
-      {items.length > 0 && (
+      {itemsWithAbsoluteImages.length > 0 && (
         <div style={{ marginBottom: '16px', maxHeight: '200px', overflowY: 'auto' }}>
-          {items.map((item, index) => (
+          {itemsWithAbsoluteImages.map((item, index) => (
             <div
               key={item.id || index}
               style={{
@@ -288,42 +364,14 @@ function CheckoutSummary({ initialData }: { initialData: CheckoutData }) {
 }
 
 export default function CheckoutSummaryPage() {
-  const router = useRouter();
-  const [canvasData, setCanvasData] = useState<CheckoutData | null>(null);
+  // Initial data is empty - all data comes from hostContext and tool.arguments via useMcpApp
+  const initialData: CheckoutData = {
+    items: [],
+  };
 
-  useEffect(() => {
-    if (!router.isReady) return;
-
-    const { items, total, itemCount } = router.query;
-
-    const data: CheckoutData = {
-      items: items ? JSON.parse(items as string) : [],
-      total: (total as string) || undefined,
-      itemCount: itemCount ? parseInt(itemCount as string) : undefined
-    };
-
-    setCanvasData(data);
-  }, [router.isReady, router.query]);
-
-  if (!canvasData) {
-    return (
-      <div style={{ padding: '20px', color: '#94a3b8' }}>
-        <p>Loading checkout summary...</p>
-      </div>
-    );
-  }
-
-  // No wrapper needed - useMcpApp handles everything internally
   return (
-    <>
-      <style jsx global>{`
-        html, body {
-          background: transparent !important;
-          margin: 0;
-          padding: 0;
-        }
-      `}</style>
-      <CheckoutSummary initialData={canvasData} />
-    </>
+    <div style={{ margin: 0, padding: 0, overflow: 'hidden', height: '100%', width: '100%', background: 'transparent', display: 'flex', alignItems: 'flex-start' }}>
+      <CheckoutSummary initialData={initialData} />
+    </div>
   );
 }
