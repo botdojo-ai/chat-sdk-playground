@@ -245,27 +245,27 @@ export default function BonsaiShopAgent({ isOpen }: BonsaiShopAgentProps) {
     resources: [
       {
         name: 'card',
-        uri: 'bonsai-shop://context/card',
+        uri: 'bonsai-shop://context/cache_buster/card',
         description: 'Bonsai shop assistant context with cart state and guidelines',
         mimeType: 'text/plain',
         getContent: async () => buildResourceContent(cartRef.current, currentPageContextRef.current),
       },
       {
-        uri: 'ui://bonsai-shop/product-card',
+        uri: 'ui://bonsai-shop/context/cache_buster/product-card',
         name: 'Product Card MCP App',
         description: 'MCP App for displaying product details with add-to-cart functionality',
         mimeType: 'text/html;profile=mcp-app',
         getContent: async () => {
           const { fetchMcpAppHtml } = await import('@/utils/fetchMcpApp');
           return {
-            uri: 'ui://bonsai-shop/product-card',
+            uri: 'ui://bonsai-shop/context/cache_buster/product-card',
             mimeType: 'text/html;profile=mcp-app',
             text: await fetchMcpAppHtml('product-card'),
           };
         },
       },
       {
-        uri: 'ui://bonsai-shop/cart',
+        uri: 'ui://bonsai-shop/context/cache_buster/cart',
         name: 'Cart MCP App',
         description: 'MCP App for displaying shopping cart contents',
         mimeType: 'text/html;profile=mcp-app',
@@ -279,14 +279,14 @@ export default function BonsaiShopAgent({ isOpen }: BonsaiShopAgentProps) {
         },
       },
       {
-        uri: 'ui://bonsai-shop/checkout-summary',
+        uri: 'ui://bonsai-shop/context/cache_buster/checkout-summary',
         name: 'Checkout Summary MCP App',
         description: 'MCP App for displaying checkout summary',
         mimeType: 'text/html;profile=mcp-app',
         getContent: async () => {
           const { fetchMcpAppHtml } = await import('@/utils/fetchMcpApp');
           return {
-            uri: 'ui://bonsai-shop/checkout-summary',
+            uri: 'ui://bonsai-shop/context/cache_buster/checkout-summary',
             mimeType: 'text/html;profile=mcp-app',
             text: await fetchMcpAppHtml('checkout-summary'),
           };
@@ -424,7 +424,7 @@ export default function BonsaiShopAgent({ isOpen }: BonsaiShopAgentProps) {
         },
         _meta: {
           'botdojo/display-name': 'Show Product Card',
-          ui: { resourceUri: 'ui://bonsai-shop/product-card', prefersProxy: true },
+          ui: { resourceUri: 'ui://bonsai-shop/context/cache_buster/product-card', prefersProxy: true },
         },
         execute: async (params: { product_id: string }, context?: ToolExecutionContext) => {
           context?.notifyToolInputPartial?.({ product_id: params.product_id });
@@ -442,7 +442,7 @@ export default function BonsaiShopAgent({ isOpen }: BonsaiShopAgentProps) {
         },
         _meta: {
           'botdojo/display-name': 'Show Cart',
-          ui: { resourceUri: 'ui://bonsai-shop/cart', prefersProxy: true },
+          ui: { resourceUri: 'ui://bonsai-shop/context/cache_buster/cart', prefersProxy: true },
         },
         execute: async (params: { message?: string }, context?: ToolExecutionContext) => {
           context?.notifyToolInputPartial?.({ fetchCart: true });
@@ -460,7 +460,7 @@ export default function BonsaiShopAgent({ isOpen }: BonsaiShopAgentProps) {
         },
         _meta: {
           'botdojo/display-name': 'Checkout',
-          ui: { resourceUri: 'ui://bonsai-shop/checkout-summary', prefersProxy: true },
+          ui: { resourceUri: 'ui://bonsai-shop/context/cache_buster/checkout-summary', prefersProxy: true },
         },
         execute: async (params: { confirm?: boolean }, context?: ToolExecutionContext) => {
           context?.notifyToolInputPartial?.({ fetchCart: true });

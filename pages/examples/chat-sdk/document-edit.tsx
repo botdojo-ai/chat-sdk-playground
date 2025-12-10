@@ -178,7 +178,7 @@ export default function UiMcp() {
         _meta: {
           'botdojo/display-name': 'Suggest Update',
           ui: {
-            resourceUri: 'ui://ui-mcp/review',
+            resourceUri: 'ui://ui-mcp/review/cache_buster',
             prefersProxy: true,
           },
         },
@@ -246,7 +246,7 @@ export default function UiMcp() {
         _meta: { 
           'botdojo/display-name': 'Regex Suggest Update',
           ui: {
-            resourceUri: 'ui://ui-mcp/review',
+            resourceUri: 'ui://ui-mcp/review/cache_buster',
             prefersProxy: true,
           },
         },
@@ -294,7 +294,7 @@ export default function UiMcp() {
         getContent: async () => markdownRef.current,
       },
       {
-        uri: 'ui://ui-mcp/review',
+        uri: 'ui://ui-mcp/review/cache_buster',
         name: 'Review Diff MCP App',
         description: 'MCP App for reviewing and applying markdown diff suggestions.',
         mimeType: 'text/html;profile=mcp-app',
@@ -303,7 +303,7 @@ export default function UiMcp() {
           const { fetchMcpAppHtml } = await import('@/utils/fetchMcpApp');
           const html = await fetchMcpAppHtml('review-mcp-app');
           return {
-            uri: 'ui://ui-mcp/review',
+            uri: 'ui://ui-mcp/review/cache_buster',
             mimeType: 'text/html;profile=mcp-app',
             text: html,
           };

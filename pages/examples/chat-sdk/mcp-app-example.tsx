@@ -159,7 +159,7 @@ export default function McpAppExample() {
         },
         _meta: {
           ui: {
-            resourceUri: 'ui://mcp-app-demo/html',
+            resourceUri: 'ui://mcp-app-demo/context/cache_buster/example_mcp_app',
             prefersProxy: true,
            
           },
@@ -198,7 +198,7 @@ export default function McpAppExample() {
     ],
     resources: [
       {
-        uri: 'ui://mcp-app-demo/html',
+        uri: 'ui://mcp-app-demo/context/cache_buster/example_mcp_app',
         name: 'Inline MCP HTML App',
         description: 'Inline MCP Apps HTML resource for ui/message + counter persistence',
         mimeType: 'text/html;profile=mcp-app',

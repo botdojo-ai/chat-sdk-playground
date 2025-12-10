@@ -800,7 +800,7 @@ export default function HeadlessMcpExample() {
         },
         _meta: {
           ui: {
-            resourceUri: 'ui://headless-mcp-demo/html',
+            resourceUri: 'ui://headless-mcp-demo/context/cache_buster/example_mcp_app',
             csp: {
               connectDomains: [localOrigin],
               resourceDomains: [localOrigin],
@@ -858,7 +858,7 @@ export default function HeadlessMcpExample() {
     ],
     resources: [
       {
-        uri: 'ui://headless-mcp-demo/html',
+        uri: 'ui://headless-mcp-demo/context/cache_buster/example_mcp_app',
         name: 'Inline MCP HTML App',
         description: 'Inline MCP Apps HTML resource for ui/message + counter persistence',
         mimeType: 'text/html;profile=mcp-app',
@@ -867,15 +867,13 @@ export default function HeadlessMcpExample() {
           const { fetchMcpAppHtml } = await import('@/utils/fetchMcpApp');
           const html = await fetchMcpAppHtml('remote-url-app');
           return {
-            uri: 'ui://headless-mcp-demo/html',
+            uri: 'ui://headless-mcp-demo/context/cache_buster/example_mcp_app',
             mimeType: 'text/html;profile=mcp-app',
             text: html,
           };
         },
       },
-      
     ],
-    prompts: [],
   }), [localOrigin]);
 
   useEffect(() => {
