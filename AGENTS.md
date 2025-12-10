@@ -155,8 +155,9 @@ Tests are located in `tests/` directory and use Puppeteer for browser automation
 
 **Prerequisites:**
 1. Run `npm run setup` to configure API keys
-2. Start dev server in one terminal: `npm run dev`
-3. Run tests in another terminal: `npm run test`
+2. Install test dependencies: `npm run install:test-deps` (Puppeteer is optional and not installed by default)
+3. Start dev server in one terminal: `npm run dev`
+4. Run tests in another terminal: `npm run test`
 
 **Test files:**
 - `tests/chat-sdk/`: Chat SDK + MCP examples (Puppeteer)
@@ -196,6 +197,20 @@ NEXT_PUBLIC_BOTDOJO_MODEL_CONTEXT_API=your-model-context-api-key
 ```
 
 **Organization:** User-specific values are at the top for easy deletion when sharing the file.
+
+## Deployment
+
+### Vercel Configuration
+
+The playground uses `vercel.json` to optimize build times:
+
+```json
+{
+  "installCommand": "npm install --no-optional"
+}
+```
+
+This skips optional dependencies (Puppeteer) during deployment, keeping builds fast and avoiding unnecessary ~300MB downloads in production.
 
 ## Architecture
 

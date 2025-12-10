@@ -11,6 +11,8 @@ const path = require('path');
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@botdojo/chat-sdk'],
+  // Workaround for SWC download issues on Vercel
+  swcMinify: true,
   webpack: (config, { isServer }) => {
     // Exclude @botdojo/sdk from client bundle (it's server-only)
     if (!isServer) {

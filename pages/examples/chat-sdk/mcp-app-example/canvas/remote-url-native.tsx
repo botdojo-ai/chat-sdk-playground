@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { WidgetState } from '../../mcp-app-example';
-import { McpUiHostContext } from '@botdojo/sdk-types';
 
 type LogEntry = string;
 type PendingRequest = {
@@ -104,7 +103,7 @@ function NativeMcpCanvas() {
         switch (method) {
           case 'ui/initialize': {
             setHostInfo(params?.hostInfo || params?.appInfo || null);
-            const hostContext: McpUiHostContext = params?.hostContext || {};
+            const hostContext: any = params?.hostContext || {};
             const state = hostContext.state || {};
             
             // SEP-1865 spec-compliant toolInfo

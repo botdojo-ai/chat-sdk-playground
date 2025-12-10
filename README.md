@@ -164,17 +164,22 @@ NEXT_PUBLIC_MCP_SERVER_URL=https://botdojo.com/api/mcp
 | `npm run start` | Start production server |
 | `npm run lint` | Run ESLint |
 | `npm run clean` | Remove build artifacts and node_modules |
-| `npm run test` | Run all tests (requires dev server running) |
+| `npm run install:test-deps` | Install optional test dependencies (Puppeteer) |
+| `npm run test` | Run all tests (requires dev server running and test deps) |
 
 ## Testing
 
 The playground includes Puppeteer-based browser tests:
 
 ```bash
-# Prerequisites: Dev server must be running
+# Prerequisites: 
+# 1. Install test dependencies (Puppeteer is optional and not installed by default)
+npm run install:test-deps
+
+# 2. Dev server must be running
 npm run dev  # In one terminal
 
-# Run tests
+# 3. Run tests
 npm run test  # In another terminal
 ```
 
@@ -209,6 +214,20 @@ Change the port in `package.json`:
 "dev": "next dev -p 3600",
 "start": "next start -p 3600"
 ```
+
+## Deployment
+
+### Vercel
+
+The playground is configured to skip optional dependencies (like Puppeteer) during deployment via `vercel.json`:
+
+```json
+{
+  "installCommand": "npm install --no-optional"
+}
+```
+
+This keeps build times fast and avoids unnecessary dependencies in production.
 
 ## Tech Stack
 
