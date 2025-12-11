@@ -423,6 +423,30 @@ export function BotDojoChatDebugLayout({ children }: { children: React.ReactNode
 }
 
 /**
+ * Sidebar collapse/expand icon component
+ */
+function SidebarToggleIcon({ collapsed }: { collapsed: boolean }) {
+  if (collapsed) {
+    // Menu/hamburger icon when collapsed
+    return (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="3" y1="6" x2="21" y2="6" />
+        <line x1="3" y1="12" x2="21" y2="12" />
+        <line x1="3" y1="18" x2="21" y2="18" />
+      </svg>
+    );
+  }
+  // Sidebar collapse icon when expanded (panel with left arrow)
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <line x1="9" y1="3" x2="9" y2="21" />
+      <polyline points="14 9 11 12 14 15" />
+    </svg>
+  );
+}
+
+/**
  * Collapsible navigation sidebar wrapper for left side of layout
  */
 export function BotDojoChatDebugNav({ children }: { children?: React.ReactNode }): JSX.Element {
@@ -433,80 +457,124 @@ export function BotDojoChatDebugNav({ children }: { children?: React.ReactNode }
   }
   
   const { navCollapsed, setNavCollapsed } = debug;
-  const width = navCollapsed ? '60px' : '320px';
+  const width = navCollapsed ? '56px' : '320px';
   
   return (
     <div style={{
       width,
       minWidth: width,
       height: '100vh',
-      transition: 'width 0.3s ease',
+      transition: 'width 0.2s ease',
       display: 'flex',
       flexDirection: 'column',
       overflow: 'hidden',
       position: 'relative',
+      background: navCollapsed ? '#f8fafc' : 'transparent',
+      borderRight: navCollapsed ? '1px solid #e2e8f0' : 'none',
     }}>
-      {/* Toggle button overlay */}
-      <button
-        onClick={() => setNavCollapsed(!navCollapsed)}
-        style={{
-          position: 'absolute',
-          top: '16px',
-          right: '16px',
-          zIndex: 1000,
-          width: '32px',
-          height: '32px',
-          padding: '0',
-          background: 'rgba(148, 163, 184, 0.1)',
-          color: '#94a3b8',
-          border: '1px solid rgba(148, 163, 184, 0.2)',
-          borderRadius: '6px',
-          cursor: 'pointer',
-          fontSize: '16px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          transition: 'all 0.2s',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = 'rgba(148, 163, 184, 0.2)';
-          e.currentTarget.style.transform = 'scale(1.05)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = 'rgba(148, 163, 184, 0.1)';
-          e.currentTarget.style.transform = 'scale(1)';
-        }}
-        title={navCollapsed ? 'Expand navigation' : 'Collapse navigation'}
-      >
-        {navCollapsed ? '→' : '←'}
-      </button>
-      
       {/* Nav content */}
       <div style={{
         flex: 1,
         overflow: 'hidden',
         opacity: navCollapsed ? 0 : 1,
-        transition: 'opacity 0.2s ease',
+        visibility: navCollapsed ? 'hidden' : 'visible',
+        transition: 'opacity 0.15s ease, visibility 0.15s ease',
         pointerEvents: navCollapsed ? 'none' : 'auto',
       }}>
         {children}
       </div>
       
-      {/* Collapsed state indicator */}
+      {/* Collapsed state - show toggle button centered */}
       {navCollapsed && (
         <div style={{
           position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          color: '#64748b',
-          fontSize: '24px',
-          pointerEvents: 'none',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          paddingTop: '16px',
         }}>
-          ☰
+          <button
+            onClick={() => setNavCollapsed(false)}
+            style={{
+              width: '40px',
+              height: '40px',
+              padding: '0',
+              background: 'white',
+              color: '#64748b',
+              border: '1px solid #e2e8f0',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.15s ease',
+              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#f8fafc';
+              e.currentTarget.style.borderColor = '#cbd5e1';
+              e.currentTarget.style.color = '#475569';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'white';
+              e.currentTarget.style.borderColor = '#e2e8f0';
+              e.currentTarget.style.color = '#64748b';
+            }}
+            title="Expand sidebar"
+          >
+            <SidebarToggleIcon collapsed={true} />
+          </button>
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * Standalone sidebar toggle button to be used inside nav header
+ */
+export function SidebarCollapseButton(): JSX.Element | null {
+  const debug = useBotDojoChatDebug();
+  
+  if (!debug || debug.navCollapsed) {
+    return null;
+  }
+  
+  const { setNavCollapsed } = debug;
+  
+  return (
+    <button
+      onClick={() => setNavCollapsed(true)}
+      style={{
+        width: '32px',
+        height: '32px',
+        padding: '0',
+        background: 'transparent',
+        color: '#94a3b8',
+        border: 'none',
+        borderRadius: '6px',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        transition: 'all 0.15s ease',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = '#f1f5f9';
+        e.currentTarget.style.color = '#64748b';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = 'transparent';
+        e.currentTarget.style.color = '#94a3b8';
+      }}
+      title="Collapse sidebar"
+    >
+      <SidebarToggleIcon collapsed={false} />
+    </button>
   );
 }
 

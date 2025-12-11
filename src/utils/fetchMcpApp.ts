@@ -20,7 +20,9 @@ export type McpAppName =
   | 'checkout-summary'
   | 'remote-url-app'
   | 'review'
-  | 'review-mcp-app';
+  | 'review-mcp-app'
+  | 'enhance-mcp-app'
+  | 'streaming-demo-app';
 
 // Cache for server-side rendering (short-lived, just for the render cycle)
 const ssrCache = new Map<string, { html: string; timestamp: number }>();

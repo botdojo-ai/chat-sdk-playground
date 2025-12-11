@@ -16,6 +16,7 @@ out/
 # Build outputs
 dist/
 build/
+@generated/
 
 # IDE
 .idea/

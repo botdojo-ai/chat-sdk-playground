@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import products from '../examples/chat-sdk/bonsai-shop/data/products.json';
+import products from '../examples/bonsai-shop/data/products.json';
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {

@@ -22,6 +22,8 @@ const VALID_APPS = [
   'remote-url-app',
   'review',
   'review-mcp-app',
+  'enhance-mcp-app',
+  'streaming-demo-app',
 ] as const;
 
 type ValidAppName = typeof VALID_APPS[number];

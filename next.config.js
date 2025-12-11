@@ -40,12 +40,12 @@ const nextConfig = {
     return [
       {
         // Allow the remote MCP app example to be fetched and framed by the proxy origin in local dev.
-        source: '/examples/chat-sdk/mcp-app-example/canvas/remote-url-native',
+        source: '/examples/mcp-app-example/widgets/remote-url-native',
         headers: corsHeaders,
       },
       {
-        // Allow the document-edit canvas to be fetched by mcp-app-proxy.botdojo.com
-        source: '/examples/chat-sdk/document-edit/canvas/:path*',
+        // Allow the document-edit widgets to be fetched by mcp-app-proxy.botdojo.com
+        source: '/examples/document-edit/widgets/:path*',
         headers: corsHeaders,
       },
     ];

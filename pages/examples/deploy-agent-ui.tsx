@@ -391,7 +391,7 @@ export default function DeployAgentUIPage() {
             </div>
 
             <a 
-              href="/examples/chat-sdk/basic"
+              href="/examples/basic"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -440,7 +440,7 @@ export default function DeployAgentUIPage() {
             </div>
 
             <a 
-              href="/examples/chat-sdk/headless-mcp"
+              href="/examples/headless-mcp"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',

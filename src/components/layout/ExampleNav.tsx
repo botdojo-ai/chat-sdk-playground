@@ -1,202 +1,252 @@
 import { useRouter } from 'next/router';
+import { useState } from 'react';
+import { SidebarCollapseButton } from '@/utils/BotDojoChatDebug';
 
-interface Example {
+export interface NavItem {
   id: string;
   title: string;
   route: string;
-  category: 'start' | 'examples' | 'learn';
-  icon: string;
-  description: string;
   external?: boolean;
 }
 
-const EXAMPLES: Example[] = [
-  // GET STARTED
-  {
-    id: 'getting-started',
-    title: 'Getting Started',
-    route: '/examples/chat-sdk/getting-started',
-    category: 'start',
-    icon: '🚀',
-    description: 'Install, clone a test agent, and get your API key',
-  },
-  
-  // EXAMPLES
-  {
-    id: 'customize-chat-ui',
-    title: 'Chat Widget Customization',
-    route: '/examples/chat-sdk/basic',
-    category: 'start',
-    icon: '🎨',
-    description: 'Configure display modes, themes, and styling',
-  },
-  
-  // LEARN
-  {
-    id: 'mcp-guide',
-    title: 'Building Agent Experiences',
-    route: '/examples/chat-sdk/mcp-guide',
-    category: 'learn',
-    icon: '📖',
-    description: 'Complete guide to MCP Apps and Frontend MCP integration',
-  },
-  
-  // EXAMPLES
-  {
-    id: 'mcp-app-example',
-    title: 'MCP App Example',
-    route: '/examples/chat-sdk/mcp-app-example',
-    category: 'examples',
-    icon: '🧩',
-    description: 'Interactive MCP Apps with ui/message, tools/call, ui/open-link',
-  },
+export interface NavSubsection {
+  title: string;
+  items: NavItem[];
+}
 
+// Learn section with subsections
+export const LEARN_SUBSECTIONS: NavSubsection[] = [
+  {
+    title: 'Getting Started',
+    items: [
+      {
+        id: 'getting-started',
+        title: 'Quick Start',
+        route: '/examples/getting-started',
+      },
+    ],
+  },
+  {
+    title: 'Components',
+    items: [
+      {
+        id: 'embedded-chat',
+        title: 'Embedded Chat',
+        route: '/examples/embedded-chat',
+      },
+      {
+        id: 'customize-chat-ui',
+        title: 'Widget Configuration',
+        route: '/examples/basic',
+      },
+      {
+        id: 'headless-chat',
+        title: 'Headless Chat',
+        route: '/examples/headless-chat',
+      },
+    ],
+  },
+  {
+    title: 'Frontend MCP',
+    items: [
+      {
+        id: 'frontend-mcp',
+        title: 'Introduction',
+        route: '/examples/frontend-mcp',
+      },
+      {
+        id: 'frontend-mcp-task-list',
+        title: 'Task List Example',
+        route: '/examples/frontend-mcp/task-list',
+      },
+    ],
+  },
+  {
+    title: 'Chat Widgets',
+    items: [
+      {
+        id: 'mcp-apps-intro',
+        title: 'Introduction',
+        route: '/examples/mcp-apps',
+      },
+      {
+        id: 'mcp-apps-inline',
+        title: 'Test Harness',
+        route: '/examples/mcp-apps/inline',
+      },
+    ],
+  },
+];
+
+// Examples section items (flat list)
+export const EXAMPLES_NAV_ITEMS: NavItem[] = [
+  {
+    id: 'product-enhance',
+    title: 'Product Enhancement',
+    route: '/examples/product-enhance',
+  },
   {
     id: 'edit-document',
     title: 'Edit Document',
-    route: '/examples/chat-sdk/document-edit',
-    category: 'examples',
-    icon: '📝',
-    description: 'Agent that modifies a markdown editor in-place',
+    route: '/examples/document-edit',
   },
   {
-    id: 'bonsai-shop',
-    title: 'Bonsai Shop',
-    route: '/examples/chat-sdk/bonsai-shop',
-    category: 'examples',
-    icon: '🌳',
-    description: 'E-commerce demo with MCP Apps, tools, and checkout',
+    id: 'mcp-app-example',
+    title: 'Tool Progress',
+    route: '/examples/mcp-app-example',
   },
-  {
-    id: 'custom-chat-ui',
-    title: 'Headless Chat',
-    route: '/examples/chat-sdk/headless-mcp',
-    category: 'examples',
-    icon: '🖥️',
-    description: 'Build your own chat interface with MCP Apps',
-  },
- 
 ];
 
-export default function ExampleNav() {
+function ChevronIcon({ open }: { open: boolean }) {
+  return (
+    <svg
+      className={`w-3 h-3 text-slate-400 transition-transform duration-200 ${open ? 'rotate-90' : ''}`}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+    </svg>
+  );
+}
+
+function ExternalIcon() {
+  return (
+    <svg className="w-3 h-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+    </svg>
+  );
+}
+
+interface ExampleNavProps {
+  section: 'learn' | 'examples';
+}
+
+export default function ExampleNav({ section }: ExampleNavProps) {
   const router = useRouter();
+  const sectionTitle = section === 'learn' ? 'Learn' : 'Examples';
+  
+  // For Learn section, initialize all subsections as open
+  const [openSubsections, setOpenSubsections] = useState<Record<string, boolean>>(() =>
+    LEARN_SUBSECTIONS.reduce((acc, s) => ({ ...acc, [s.title]: true }), {})
+  );
 
-  const sections = [
-    { title: 'Get Started', category: 'start' as const },
-    { title: 'Learn', category: 'learn' as const },
-    { title: 'Examples', category: 'examples' as const },
-  ];
+  const toggleSubsection = (title: string) => {
+    setOpenSubsections(prev => ({ ...prev, [title]: !prev[title] }));
+  };
 
-  const renderSection = (title: string, category: Example['category']) => {
-    const items = EXAMPLES.filter(e => e.category === category);
-    if (items.length === 0) return null;
-
+  const renderNavItem = (item: NavItem) => {
+    const isActive = !item.external && router.pathname === item.route;
+    
+    if (item.external) {
+      return (
+        <a
+          key={item.id}
+          href={item.route}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-between gap-2 px-3 py-2 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-colors"
+        >
+          <span>{item.title}</span>
+          <ExternalIcon />
+        </a>
+      );
+    }
+    
     return (
-      <div className="space-y-2" key={title}>
-        <h3 className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-1">
-          {title}
-        </h3>
-        <div className="space-y-1">
-          {items.map((example) => {
-            const isActive = !example.external && router.pathname === example.route;
-            
-            if (example.external) {
-              return (
-                <a
-                  key={example.id}
-                  href={example.route}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full text-left rounded-lg px-3 py-2 border border-transparent bg-white hover:border-slate-200 hover:bg-white text-slate-800 block transition-colors duration-200"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="text-lg mt-[2px]">{example.icon}</div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-semibold flex items-center gap-1">
-                        {example.title}
-                        <span className="text-slate-400">↗</span>
-                      </div>
-                      <p className="text-xs text-slate-500 leading-relaxed">
-                        {example.description}
-                      </p>
-                    </div>
-                  </div>
-                </a>
-              );
-            }
-            
-            return (
-              <button
-                key={example.id}
-                onClick={() => router.push(example.route)}
-                className={`
-                  w-full text-left rounded-lg px-3 py-2 border transition-colors duration-200
-                  ${isActive
-                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                    : 'border-transparent bg-white hover:border-slate-200 hover:bg-white text-slate-800'
-                  }
-                `}
-              >
-                <div className="flex items-start gap-3">
-                  <div className="text-lg mt-[2px]">{example.icon}</div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold">{example.title}</div>
-                    <p className="text-xs text-slate-500 leading-relaxed">
-                      {example.description}
-                    </p>
-                  </div>
-                  {isActive && <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-1" />}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      <button
+        key={item.id}
+        onClick={() => router.push(item.route)}
+        className={`
+          w-full text-left px-3 py-2 text-sm rounded-md transition-colors mb-0.5
+          ${isActive
+            ? 'text-indigo-600 font-medium bg-indigo-50'
+            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+          }
+        `}
+      >
+        {item.title}
+      </button>
     );
   };
 
   return (
-    <nav className="w-full h-screen bg-white border-r border-slate-200 flex flex-col">
-      <div className="px-5 py-5 border-b border-slate-200 bg-white">
-        <a 
-          href="/" 
-          className="flex items-center gap-3 mb-2 cursor-pointer"
-        >
-          <div className="w-11 h-11 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center">
-            <img 
-              src="/logo.svg" 
-              alt="BotDojo Logo" 
-              className="w-7 h-7 object-contain"
-            />
+    <nav className="w-full h-full bg-white border-r border-slate-200 flex flex-col">
+      {/* Header */}
+      <div className="px-4 py-3 border-b border-slate-200">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center shadow-sm">
+              <svg className="w-4.5 h-4.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-sm font-semibold text-slate-900 leading-tight">{sectionTitle}</h1>
+              <p className="text-[11px] text-slate-500 leading-tight">BotDojo SDK</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-lg font-semibold text-slate-900">
+          <SidebarCollapseButton />
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <div className="flex-1 overflow-y-auto py-3">
+        {section === 'learn' ? (
+          // Learn section with subsections
+          <div className="px-2">
+            {LEARN_SUBSECTIONS.map((subsection) => {
+              const isOpen = openSubsections[subsection.title];
+              return (
+                <div key={subsection.title} className="mb-2">
+                  <button
+                    onClick={() => toggleSubsection(subsection.title)}
+                    className="w-full flex items-center gap-2 px-2 py-1.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider hover:text-slate-700 transition-colors"
+                  >
+                    <ChevronIcon open={isOpen} />
+                    {subsection.title}
+                  </button>
+                  
+                  {isOpen && (
+                    <div className="ml-3 pl-2 border-l border-slate-200">
+                      {subsection.items.map(renderNavItem)}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          // Examples section (flat list)
+          <div className="px-2">
+            {EXAMPLES_NAV_ITEMS.map(renderNavItem)}
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="border-t border-slate-200 px-4 py-3">
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-slate-400">v0.0.6</span>
+          <div className="flex items-center gap-3">
+            <a 
+              href="https://github.com/botdojo/chat-sdk" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-slate-500 hover:text-slate-700 transition-colors"
+            >
+              GitHub
+            </a>
+            <a 
+              href="https://www.botdojo.com/solutions/agentic-ui" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
+            >
               BotDojo
-            </h1>
-            <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">
-              Chat SDK <span className="text-indigo-500">beta</span>
-            </p>
+            </a>
           </div>
-        </a>
-        <p className="text-sm text-slate-600 leading-relaxed">
-          Build interactive agent experiences for your frontend.
-        </p>
-      </div>
-
-      <div className="flex-1 overflow-y-auto px-4 py-5 space-y-6 bg-slate-50">
-        {sections.map((section) => renderSection(section.title, section.category))}
-      </div>
-
-      <div className="border-t border-slate-200 px-4 py-3 bg-white text-xs text-slate-500 flex items-center justify-between">
-        <span>0.0.6 beta</span>
-        <a 
-          href="https://www.botdojo.com/solutions/agentic-ui" 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="text-indigo-600 hover:text-indigo-700 font-medium"
-        >
-          About BotDojo →
-        </a>
+        </div>
       </div>
     </nav>
   );

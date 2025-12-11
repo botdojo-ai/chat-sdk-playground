@@ -114,7 +114,7 @@ function BonsaiShopWrapperContent({ children }: BonsaiShopWrapperProps): JSX.Ele
 
 
   // Determine if we're on a Bonsai Shop page
-  const isBonsaiShopPage = router.pathname.startsWith('/examples/chat-sdk/bonsai-shop');
+  const isBonsaiShopPage = router.pathname.startsWith('/examples/bonsai-shop');
   const isCanvasPage = router.pathname.includes('/canvas/');
 
   // Update cart ref setter (useCallback to prevent recreating on every render)
@@ -138,7 +138,7 @@ function BonsaiShopWrapperContent({ children }: BonsaiShopWrapperProps): JSX.Ele
       return `You are on the checkout page. The user is reviewing their order and preparing to complete their purchase. Their cart contains ${cartLength} items.`;
     } else if (path.includes('/product/')) {
       return `You are on a product detail page (product ID: ${queryId}). The user is viewing detailed information about a specific bonsai tree and can add it to their cart.`;
-    } else if (path === '/examples/chat-sdk/bonsai-shop') {
+    } else if (path === '/examples/bonsai-shop') {
       return `You are on the Serenity Bonsai Co. homepage. The user can browse our collection of premium bonsai trees, add items to their cart, and interact with the AI shopping assistant.`;
     }
     return 'You are on the Serenity Bonsai Co. website.';
@@ -193,7 +193,7 @@ function BonsaiShopWrapperContent({ children }: BonsaiShopWrapperProps): JSX.Ele
           type: 'text',
           text: JSON.stringify({
             action: 'navigate',
-            url: '/examples/chat-sdk/bonsai-shop/checkout',
+            url: '/examples/bonsai-shop/checkout',
             message: 'Redirecting to checkout...',
           }),
         },
@@ -203,7 +203,7 @@ function BonsaiShopWrapperContent({ children }: BonsaiShopWrapperProps): JSX.Ele
             uri: 'canvas://link',
             mimeType: 'application/json',
             text: JSON.stringify({
-              url: '/examples/chat-sdk/bonsai-shop/checkout',
+              url: '/examples/bonsai-shop/checkout',
               target: '_self',
             }),
           },
@@ -353,7 +353,7 @@ export function BonsaiShopWrapper({ children }: BonsaiShopWrapperProps): JSX.Ele
 
   // Memoize router-derived values to prevent unnecessary re-renders
   const shouldRenderChat = useMemo(() => {
-    const isBonsaiShopPage = router.pathname.startsWith('/examples/chat-sdk/bonsai-shop');
+    const isBonsaiShopPage = router.pathname.startsWith('/examples/bonsai-shop');
     const isCanvasPage = router.pathname.includes('/canvas/');
     return isBonsaiShopPage && !isCanvasPage;
   }, [router.pathname]);
