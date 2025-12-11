@@ -1,6 +1,6 @@
 {
   "name": "interactive-agent-sdk-playground",
-  "version": "0.0.17",
+  "version": "0.0.18",
   "description": "Interactive Agent SDK - Build AI agents that see and act in your app. Built on open MCP standards for tool integration and MCP Apps for rich UI experiences.",
   "scripts": {
     "setup": "bash scripts/setup.sh",
@@ -35,6 +35,7 @@
     "@types/react": "^18.2.0",
     "@types/uuid": "^9.0.0",
     "autoprefixer": "^10.4.0",
+
     "chokidar": "^3.6.0",
     "concurrently": "^9.2.1",
     "esbuild": "^0.27.1",
@@ -51,12 +52,14 @@
   "keywords": [
     "botdojo",
     "interactive-agent-sdk",
+    
     "chat-sdk",
     "playground",
     "mcp",
     "mcp-apps",
     "ai",
     "agent",
+    "agentic-ui",
     "agentic-ui",
     "react",
     "nextjs",
@@ -68,13 +71,16 @@
     "url": "https://botdojo.com"
   },
   "license": "MIT",
+
   "homepage": "https://github.com/botdojo-ai/chat-sdk-playground",
   "repository": {
     "type": "git",
     "url": "https://github.com/botdojo-ai/chat-sdk-playground"
+
   },
   "bugs": {
     "url": "https://github.com/botdojo-ai/chat-sdk-playground/issues"
+
   },
   "engines": {
     "node": ">=18.0.0"

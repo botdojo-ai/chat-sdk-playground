@@ -207,7 +207,6 @@ export default function ProductEnhance({ sourceFiles }: ProductEnhanceProps) {
   const handleIntent = async (intent: string, params: any, appId?: string) => {
     const actualAppId = appId || params?.appId;
     debugLoggerRef.current?.logCanvasIntent(intent, params, actualAppId || '');
-    debugger
     if (intent === 'updateDescription') {
       const descToApply = params?.description;
       if (typeof descToApply === 'string') {

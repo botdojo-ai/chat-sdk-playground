@@ -279,8 +279,8 @@ export default function InlineVsRemotePage({ examples }: InlineVsRemotePageProps
 
         <Tabs
           tabs={exampleTabs}
-          activeTab={activeExample}
-          onTabChange={setActiveExample}
+          activeId={activeExample}
+          onChange={setActiveExample}
         />
 
         <div style={{ marginTop: '20px' }}>
