@@ -22,6 +22,7 @@ function ProductCard({ initialData }: { initialData: ProductCardData }) {
     tool,
     sendMessage,
     callTool,
+    reportSize,
   } = useMcpApp({
     containerRef: cardRef,
     autoReportSize: true,
@@ -91,7 +92,7 @@ function ProductCard({ initialData }: { initialData: ProductCardData }) {
     setLoading(true);
 
     callTool<ProductCardData>('getProductInfo', { productId })
-      .then((result) => {
+      .then((result: ProductCardData) => {
         console.log('[ProductCard] getProductInfo result:', result);
         if (result && result.name) {
           setProductData({
@@ -105,7 +106,7 @@ function ProductCard({ initialData }: { initialData: ProductCardData }) {
           });
         }
       })
-      .catch((err) => {
+      .catch((err: Error) => {
         console.error('[ProductCard] Error fetching product info:', err);
       })
       .finally(() => {
@@ -114,6 +115,22 @@ function ProductCard({ initialData }: { initialData: ProductCardData }) {
   }, [isInitialized, toolArgsStr, callTool, loading]);
 
   const data = productData;
+
+  // Report size after data loads (content changes size)
+  useEffect(() => {
+    if (productData && cardRef.current) {
+      // Small delay to let DOM update
+      const timer = setTimeout(() => {
+        const rect = cardRef.current?.getBoundingClientRect();
+        if (rect && rect.width > 0 && rect.height > 0) {
+          console.log('[ProductCard] Reporting size after data load:', rect.width, rect.height);
+          reportSize(Math.ceil(rect.width), Math.ceil(rect.height));
+        }
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [productData, reportSize]);
+
   const toAbsoluteImage = useCallback((path?: string) => {
     if (!path) return path;
     if (/^https?:\/\//i.test(path)) return path;
@@ -183,15 +200,15 @@ function ProductCard({ initialData }: { initialData: ProductCardData }) {
       setTimeout(() => setFeedback(''), 3000);
     }
   };
+  console.log("ProductCard data", data, isInitialized, toolProductId, loading);
+  
+  // Determine loading state
+  const isWaitingForInit = !isInitialized;
+  const isWaitingForArgs = isInitialized && !toolProductId && !loading;
+  const isLoadingData = loading || (isInitialized && toolProductId && !data);
+  const showLoading = !data || !data.name;
 
-  if (!data || !data.name) {
-    // Determine what state we're in
-    const isLoading = loading || (isInitialized && toolProductId && !data);
-    const isWaitingForInit = !isInitialized;
-    const isWaitingForArgs = isInitialized && !toolProductId && !loading;
-    return <></>;
-  }
-
+  // ALWAYS render the cardRef div so MCP client can initialize and report size
   return (
     <div
       ref={cardRef}
@@ -200,15 +217,41 @@ function ProductCard({ initialData }: { initialData: ProductCardData }) {
         padding: '16px',
         maxWidth: '400px',
         backgroundColor: 'transparent',
+        minHeight: showLoading ? '100px' : undefined,
       }}
     >
+      {showLoading ? (
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '12px',
+          padding: '20px',
+          color: '#94a3b8',
+        }}>
+          <div style={{
+            width: '24px',
+            height: '24px',
+            border: '2px solid #334155',
+            borderTopColor: '#10b981',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+          }} />
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+          <span style={{ fontSize: '13px' }}>
+            {isWaitingForInit ? 'Initializing...' : isWaitingForArgs ? 'Waiting for product...' : 'Loading product...'}
+          </span>
+        </div>
+      ) : (
+        <>
       {data.imagePath ? (
         <img
           src={toAbsoluteImage(data.imagePath)}
           alt={data.name}
           style={{
             width: '100%',
-            height: '200px',
+            height: '120px',
             objectFit: 'cover',
             borderRadius: '8px',
             marginBottom: '12px',
@@ -217,14 +260,14 @@ function ProductCard({ initialData }: { initialData: ProductCardData }) {
       ) : (
         <div style={{
           width: '100%',
-          height: '200px',
+          height: '120px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           backgroundColor: 'rgba(30, 41, 59, 0.5)',
           borderRadius: '8px',
           marginBottom: '12px',
-          fontSize: '64px',
+          fontSize: '48px',
         }}>
           {categoryEmoji[data.category || ''] || '📦'}
         </div>
@@ -404,6 +447,8 @@ function ProductCard({ initialData }: { initialData: ProductCardData }) {
           ⚠️ Canvas initializing...
         </div>
       )}
+        </>
+      )}
     </div>
   );
 }
@@ -417,7 +462,7 @@ export default function ProductCardPage() {
   };
 
   return (
-    <div style={{ margin: 0, padding: 0, overflow: 'hidden', height: '100%', width: '100%', background: 'transparent', display: 'flex', alignItems: 'flex-start' }}>
+    <div style={{ margin: 0, padding: 0, background: 'transparent' }}>
       <ProductCard initialData={initialData} />
     </div>
   );
