@@ -309,6 +309,7 @@ export default function BonsaiShopAgent({ isOpen }: BonsaiShopAgentProps) {
         getContent: async () => {
           const { fetchMcpAppHtml } = await import('@/utils/fetchMcpApp');
           const origin = typeof window !== 'undefined' ? window.location.origin : '';
+       
           return {
             uri: 'ui://bonsai-shop/context/cache_buster/checkout-summary',
             mimeType: 'text/html;profile=mcp-app',

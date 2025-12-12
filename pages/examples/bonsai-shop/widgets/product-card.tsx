@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useMcpApp } from 'mcp-app-view/react';
+import { useMcpApp } from '@botdojo/chat-sdk/mcp-app-view/react';
 
 interface ProductCardData {
   id?: string;

@@ -20,9 +20,8 @@
     "bundle:mcp-app:watch": "concurrently \"node scripts/bundle-mcp-app.js --watch pages/examples/mcp-app-example/widgets/remote-url-app.tsx\" \"node scripts/bundle-mcp-app.js --watch pages/examples/document-edit/widgets/review.tsx\" \"node scripts/bundle-mcp-app.js --watch pages/examples/document-edit/widgets/review-mcp-app.tsx\" \"node scripts/bundle-mcp-app.js --watch pages/examples/bonsai-shop/widgets/product-card.tsx\" \"node scripts/bundle-mcp-app.js --watch pages/examples/bonsai-shop/widgets/cart.tsx\" \"node scripts/bundle-mcp-app.js --watch pages/examples/bonsai-shop/widgets/checkout-summary.tsx\" \"node scripts/bundle-mcp-app.js --watch pages/examples/product-enhance/widgets/enhance-mcp-app.tsx\" \"node scripts/bundle-mcp-app.js --watch pages/examples/mcp-apps/widgets/streaming-demo-app.tsx\""
   },
   "dependencies": {
-    "@botdojo/chat-sdk": "^0.0.14",
+    "@botdojo/chat-sdk": "workspace:*",
     "@mdxeditor/editor": "^3.10.0",
-    "mcp-app-view": "^0.1.4",
     "next": "13.5.6",
     "prism-react-renderer": "^2.3.0",
     "react": "^18.2.0",

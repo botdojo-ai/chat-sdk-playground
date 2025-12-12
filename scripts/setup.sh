@@ -55,14 +55,27 @@ echo -e "${GREEN}✓ BotDojo CLI is installed${RESET}\n"
 # Step 2: Authenticate
 echo -e "${BOLD}${CYAN}🔐 Authenticating with BotDojo${RESET}\n"
 
-# Check if already logged in
-if botdojo status &> /dev/null; then
-    STATUS_OUTPUT=$(botdojo status 2>&1)
-    if echo "$STATUS_OUTPUT" | grep -q "Account:" && echo "$STATUS_OUTPUT" | grep -q "Project:"; then
+# Function to verify token works by making a test API call
+verify_auth() {
+    # Try listing flows - this will fail with 401 if token is expired
+    botdojo flow list &> /dev/null
+    return $?
+}
+
+# Check if already logged in AND token is valid
+STATUS_OUTPUT=$(botdojo status 2>&1)
+if echo "$STATUS_OUTPUT" | grep -q "Account ID:" && echo "$STATUS_OUTPUT" | grep -q "Project ID:"; then
+    # Config exists, but verify token actually works
+    echo -e "${BLUE}ℹ Verifying authentication...${RESET}"
+    if verify_auth; then
         echo -e "${GREEN}✓ Already authenticated with BotDojo${RESET}\n"
     else
-        echo -e "${BLUE}ℹ Running botdojo login (will open browser)...${RESET}\n"
-        botdojo login --suggested-project-name "SDK Playground"
+        echo -e "${YELLOW}⚠️  Your session has expired. Refreshing...${RESET}\n"
+        if ! botdojo login --suggested-project-name "SDK Playground"; then
+            echo -e "${RED}✗ Authentication failed or was cancelled${RESET}\n"
+            echo -e "${YELLOW}Please run 'botdojo login' manually and then run this setup again.${RESET}\n"
+            exit 1
+        fi
         echo -e "${GREEN}✓ Successfully authenticated${RESET}\n"
     fi
 else
@@ -72,7 +85,11 @@ else
     read -n 1 -s -r
     echo ""
     echo -e "${BLUE}ℹ Opening browser for login...${RESET}\n"
-    botdojo login --suggested-project-name "SDK Playground"
+    if ! botdojo login --suggested-project-name "SDK Playground"; then
+        echo -e "${RED}✗ Authentication failed or was cancelled${RESET}\n"
+        echo -e "${YELLOW}Please run 'botdojo login' manually and then run this setup again.${RESET}\n"
+        exit 1
+    fi
     echo -e "${GREEN}✓ Successfully authenticated${RESET}\n"
 fi
 
@@ -447,35 +464,17 @@ echo -e "  Basic API Key:            ${BASIC_API_KEY:0:20}..."
 echo -e "  Model Context Flow ID:    ${MODEL_CONTEXT_FLOW_ID}"
 echo -e "  Model Context API Key:    ${MODEL_CONTEXT_API_KEY:0:20}...\n"
 
-# Prompt for directory name (default to sdk-playground)
+# Get the directory name for display
 SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-DEFAULT_DIR_NAME=$(basename "$SCRIPT_DIR")
-echo -e "${WHITE}What directory should be cloned to? (default: ${DEFAULT_DIR_NAME})${RESET}"
-read -r CLONE_DIR
-CLONE_DIR=${CLONE_DIR:-$DEFAULT_DIR_NAME}
-echo -e "${WHITE}Using directory: ${CLONE_DIR}${RESET}\n"
+DIR_NAME=$(basename "$SCRIPT_DIR")
 
-echo -e "${WHITE}${BOLD}Starting development server...${RESET}\n"
-cd "$SCRIPT_DIR" || exit 1
+echo -e "${BOLD}${CYAN}📂 Next Steps${RESET}\n"
+echo -e "${WHITE}Navigate to your playground:${RESET}"
+echo -e "  ${CYAN}cd ${DIR_NAME}${RESET}\n"
 
-# Start dev server in background
-npm run dev &
-DEV_PID=$!
+echo -e "${WHITE}Start the development server:${RESET}"
+echo -e "  ${CYAN}npm run dev${RESET}          ${WHITE}# Opens browser at http://localhost:3500${RESET}"
+echo -e "  ${CYAN}npm run dev:ngrok${RESET}    ${WHITE}# Use ngrok for external access (requires ngrok)${RESET}\n"
 
-# Wait a moment for server to start
-sleep 5
-
-echo -e "${WHITE}${BOLD}Opening browser...${RESET}\n"
-# Open browser (works on macOS, Linux with xdg-open, or Windows)
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    open "http://localhost:3500"
-elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
-    xdg-open "http://localhost:3500" 2>/dev/null || echo -e "${WHITE}Please open http://localhost:3500 in your browser${RESET}"
-else
-    echo -e "${WHITE}Please open http://localhost:3500 in your browser${RESET}"
-fi
-
-echo -e "\n${WHITE}${BOLD}Happy testing! 🚀${RESET}\n"
-echo -e "${WHITE}Development server is running in the background (PID: ${DEV_PID})${RESET}"
-echo -e "${WHITE}To stop the server, run: kill ${DEV_PID}${RESET}\n"
+echo -e "${BOLD}${GREEN}Happy testing! 🚀${RESET}\n"
 
