@@ -41,10 +41,16 @@ const toAbsoluteImage = (path?: string) => {
   return path;
 };
 
-const PRODUCT_CATALOG: Product[] = productsData.map((p) => ({
-  ...p,
-  imagePath: toAbsoluteImage(p.imagePath),
-}));
+// Helper to get product catalog with absolute image URLs (called at runtime)
+const getProductCatalog = (): Product[] => {
+  return productsData.map((p) => ({
+    ...p,
+    imagePath: toAbsoluteImage(p.imagePath),
+  }));
+};
+
+// For static lookups that don't need absolute URLs (e.g. finding product by ID)
+const PRODUCT_CATALOG_RAW: Product[] = productsData as Product[];
 
 // =============================================================================
 // Helper: Generate page context for agent system prompt
@@ -52,7 +58,7 @@ const PRODUCT_CATALOG: Product[] = productsData.map((p) => ({
 
 function generatePageContext(pathname: string, queryId: string | undefined): string {
   if (pathname.includes('/product/')) {
-    const product = PRODUCT_CATALOG.find(p => p.id === queryId);
+    const product = PRODUCT_CATALOG_RAW.find(p => p.id === queryId);
     if (product) {
       return `**Current Page: Product Detail - ${product.name}**
 
@@ -257,10 +263,19 @@ export default function BonsaiShopAgent({ isOpen }: BonsaiShopAgentProps) {
         mimeType: 'text/html;profile=mcp-app',
         getContent: async () => {
           const { fetchMcpAppHtml } = await import('@/utils/fetchMcpApp');
+          // Get current origin for CSP resourceDomains (allows loading images from this origin)
+          const origin = typeof window !== 'undefined' ? window.location.origin : '';
           return {
             uri: 'ui://bonsai-shop/context/cache_buster/product-card',
             mimeType: 'text/html;profile=mcp-app',
             text: await fetchMcpAppHtml('product-card'),
+            _meta: {
+              ui: {
+                csp: {
+                  resourceDomains: origin ? [origin] : [],
+                },
+              },
+            },
           };
         },
       },
@@ -271,10 +286,18 @@ export default function BonsaiShopAgent({ isOpen }: BonsaiShopAgentProps) {
         mimeType: 'text/html;profile=mcp-app',
         getContent: async () => {
           const { fetchMcpAppHtml } = await import('@/utils/fetchMcpApp');
+          const origin = typeof window !== 'undefined' ? window.location.origin : '';
           return {
             uri: 'ui://bonsai-shop/cart',
             mimeType: 'text/html;profile=mcp-app',
             text: await fetchMcpAppHtml('cart'),
+            _meta: {
+              ui: {
+                csp: {
+                  resourceDomains: origin ? [origin] : [],
+                },
+              },
+            },
           };
         },
       },
@@ -285,10 +308,18 @@ export default function BonsaiShopAgent({ isOpen }: BonsaiShopAgentProps) {
         mimeType: 'text/html;profile=mcp-app',
         getContent: async () => {
           const { fetchMcpAppHtml } = await import('@/utils/fetchMcpApp');
+          const origin = typeof window !== 'undefined' ? window.location.origin : '';
           return {
             uri: 'ui://bonsai-shop/context/cache_buster/checkout-summary',
             mimeType: 'text/html;profile=mcp-app',
             text: await fetchMcpAppHtml('checkout-summary'),
+            _meta: {
+              ui: {
+                csp: {
+                  resourceDomains: origin ? [origin] : [],
+                },
+              },
+            },
           };
         },
       },
@@ -313,7 +344,7 @@ export default function BonsaiShopAgent({ isOpen }: BonsaiShopAgentProps) {
           }
         },
         execute: async (params: { query?: string; category?: string }) => {
-          let results = PRODUCT_CATALOG;
+          let results = getProductCatalog();
           if (params.category && params.category !== 'all') {
             results = results.filter(p => p.category === params.category);
           }
@@ -340,7 +371,8 @@ export default function BonsaiShopAgent({ isOpen }: BonsaiShopAgentProps) {
           required: ['productId']
         },
         execute: async (params: { productId: string; quantity?: number }) => {
-          const product = PRODUCT_CATALOG.find(p => p.id === params.productId);
+          const catalog = getProductCatalog();
+          const product = catalog.find(p => p.id === params.productId);
           if (!product) return { success: false, error: 'Product not found' };
           if (!product.inStock) return { success: false, error: 'Product is out of stock' };
           
@@ -487,7 +519,8 @@ export default function BonsaiShopAgent({ isOpen }: BonsaiShopAgentProps) {
 
       switch (tool) {
         case 'addToCart': {
-          const product = PRODUCT_CATALOG.find(p => p.id === params?.productId);
+          const catalog = getProductCatalog();
+          const product = catalog.find(p => p.id === params?.productId);
           if (!product) return { success: false, error: 'Product not found' };
           if (!product.inStock) return { success: false, error: 'Product is out of stock' };
           
@@ -530,7 +563,8 @@ export default function BonsaiShopAgent({ isOpen }: BonsaiShopAgentProps) {
           };
         
         case 'getProductInfo': {
-          const product = PRODUCT_CATALOG.find(p => p.id === params?.productId);
+          const catalog = getProductCatalog();
+          const product = catalog.find(p => p.id === params?.productId);
           if (!product) return { success: false, error: `Product not found: ${params?.productId}` };
           return {
             id: product.id,
@@ -538,8 +572,8 @@ export default function BonsaiShopAgent({ isOpen }: BonsaiShopAgentProps) {
             price: product.price.toString(),
             description: product.description,
             category: product.category,
-            imagePath: toAbsoluteImage(product.imagePath),
-            imageUrl: toAbsoluteImage((product as any).imageUrl || product.imagePath),
+            imagePath: product.imagePath,
+            imageUrl: product.imagePath,
             inStock: product.inStock,
           };
         }

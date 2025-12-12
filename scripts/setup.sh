@@ -17,6 +17,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 CYAN='\033[0;36m'
+WHITE='\033[1;37m'
 BOLD='\033[1m'
 RESET='\033[0m'
 
@@ -445,12 +446,36 @@ echo -e "  Basic Flow ID:            ${BASIC_FLOW_ID}"
 echo -e "  Basic API Key:            ${BASIC_API_KEY:0:20}..."
 echo -e "  Model Context Flow ID:    ${MODEL_CONTEXT_FLOW_ID}"
 echo -e "  Model Context API Key:    ${MODEL_CONTEXT_API_KEY:0:20}...\n"
-echo -e "${BOLD}Next steps:${RESET}"
-echo -e "  1. Install dependencies:"
-echo -e "     ${CYAN}npm install${RESET}\n"
-echo -e "  2. Start the development server:"
-echo -e "     ${CYAN}npm run dev${RESET}\n"
-echo -e "  3. Open your browser:"
-echo -e "     ${CYAN}http://localhost:3500${RESET}\n"
-echo -e "Happy testing! 🚀\n"
+
+# Prompt for directory name (default to sdk-playground)
+SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+DEFAULT_DIR_NAME=$(basename "$SCRIPT_DIR")
+echo -e "${WHITE}What directory should be cloned to? (default: ${DEFAULT_DIR_NAME})${RESET}"
+read -r CLONE_DIR
+CLONE_DIR=${CLONE_DIR:-$DEFAULT_DIR_NAME}
+echo -e "${WHITE}Using directory: ${CLONE_DIR}${RESET}\n"
+
+echo -e "${WHITE}${BOLD}Starting development server...${RESET}\n"
+cd "$SCRIPT_DIR" || exit 1
+
+# Start dev server in background
+npm run dev &
+DEV_PID=$!
+
+# Wait a moment for server to start
+sleep 5
+
+echo -e "${WHITE}${BOLD}Opening browser...${RESET}\n"
+# Open browser (works on macOS, Linux with xdg-open, or Windows)
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    open "http://localhost:3500"
+elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    xdg-open "http://localhost:3500" 2>/dev/null || echo -e "${WHITE}Please open http://localhost:3500 in your browser${RESET}"
+else
+    echo -e "${WHITE}Please open http://localhost:3500 in your browser${RESET}"
+fi
+
+echo -e "\n${WHITE}${BOLD}Happy testing! 🚀${RESET}\n"
+echo -e "${WHITE}Development server is running in the background (PID: ${DEV_PID})${RESET}"
+echo -e "${WHITE}To stop the server, run: kill ${DEV_PID}${RESET}\n"
 

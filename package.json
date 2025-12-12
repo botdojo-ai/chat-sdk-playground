@@ -1,6 +1,6 @@
 {
   "name": "interactive-agent-sdk-playground",
-  "version": "0.0.18",
+  "version": "0.0.19",
   "description": "Interactive Agent SDK - Build AI agents that see and act in your app. Built on open MCP standards for tool integration and MCP Apps for rich UI experiences.",
   "scripts": {
     "setup": "bash scripts/setup.sh",
@@ -20,7 +20,7 @@
     "bundle:mcp-app:watch": "concurrently \"node scripts/bundle-mcp-app.js --watch pages/examples/mcp-app-example/widgets/remote-url-app.tsx\" \"node scripts/bundle-mcp-app.js --watch pages/examples/document-edit/widgets/review.tsx\" \"node scripts/bundle-mcp-app.js --watch pages/examples/document-edit/widgets/review-mcp-app.tsx\" \"node scripts/bundle-mcp-app.js --watch pages/examples/bonsai-shop/widgets/product-card.tsx\" \"node scripts/bundle-mcp-app.js --watch pages/examples/bonsai-shop/widgets/cart.tsx\" \"node scripts/bundle-mcp-app.js --watch pages/examples/bonsai-shop/widgets/checkout-summary.tsx\" \"node scripts/bundle-mcp-app.js --watch pages/examples/product-enhance/widgets/enhance-mcp-app.tsx\" \"node scripts/bundle-mcp-app.js --watch pages/examples/mcp-apps/widgets/streaming-demo-app.tsx\""
   },
   "dependencies": {
-    "@botdojo/chat-sdk": "^0.0.13",
+    "@botdojo/chat-sdk": "^0.0.14",
     "@mdxeditor/editor": "^3.10.0",
     "mcp-app-view": "^0.1.4",
     "next": "13.5.6",
@@ -35,7 +35,6 @@
     "@types/react": "^18.2.0",
     "@types/uuid": "^9.0.0",
     "autoprefixer": "^10.4.0",
-
     "chokidar": "^3.6.0",
     "concurrently": "^9.2.1",
     "esbuild": "^0.27.1",
@@ -46,13 +45,9 @@
     "ts-node": "^10.9.0",
     "typescript": "^5.4.5"
   },
-  "optionalDependencies": {
-    "puppeteer": "^21.0.0"
-  },
   "keywords": [
     "botdojo",
     "interactive-agent-sdk",
-    
     "chat-sdk",
     "playground",
     "mcp",
@@ -71,16 +66,13 @@
     "url": "https://botdojo.com"
   },
   "license": "MIT",
-
   "homepage": "https://github.com/botdojo-ai/chat-sdk-playground",
   "repository": {
     "type": "git",
     "url": "https://github.com/botdojo-ai/chat-sdk-playground"
-
   },
   "bugs": {
     "url": "https://github.com/botdojo-ai/chat-sdk-playground/issues"
-
   },
   "engines": {
     "node": ">=18.0.0"

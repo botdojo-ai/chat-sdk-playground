@@ -147,11 +147,7 @@ NEXT_PUBLIC_BOTDOJO_SIMPLE_TEST_API=<your-api-key>
 NEXT_PUBLIC_BOTDOJO_MODEL_CONTEXT_FLOW_ID=<your-flow-id>
 NEXT_PUBLIC_BOTDOJO_MODEL_CONTEXT_API=<your-api-key>
 
-# Environment URLs (defaults work for most users)
-NEXT_PUBLIC_BOTDOJO_API_URL=https://api.botdojo.com/api/v1
-NEXT_PUBLIC_BOTDOJO_SOCKET_URL=https://api.botdojo.com/api/v1/
-NEXT_PUBLIC_IFRAME_URL=https://botdojo.com
-NEXT_PUBLIC_MCP_SERVER_URL=https://botdojo.com/api/mcp
+
 ```
 
 ## Scripts

@@ -201,50 +201,12 @@ function AppContent({ Component, pageProps, isBonsaiShopPage, isHomePage, curren
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
   
-  // Disable Next.js automatic scroll restoration - we handle it manually to prevent unwanted scrolling
+  // Disable Next.js automatic scroll restoration - we handle it manually
   useEffect(() => {
     if (typeof window !== 'undefined') {
       // Disable browser scroll restoration
       if ('scrollRestoration' in window.history) {
         window.history.scrollRestoration = 'manual';
-      }
-      
-      // On initial page load, ensure we start at the top
-      const mainElement = document.querySelector('main');
-      if (mainElement) {
-        mainElement.scrollTop = 0;
-        
-        // Aggressively prevent scroll for the first second after page load
-        let scrollPreventionActive = true;
-        const preventScroll = () => {
-          if (scrollPreventionActive && mainElement.scrollTop > 0) {
-            mainElement.scrollTop = 0;
-          }
-        };
-        
-        const scrollHandler = () => {
-          if (scrollPreventionActive) {
-            preventScroll();
-          }
-        };
-        
-        mainElement.addEventListener('scroll', scrollHandler, { passive: false });
-        
-        // Force scroll to top multiple times
-        const scrollTimeouts = [
-          setTimeout(() => { mainElement.scrollTop = 0; }, 50),
-          setTimeout(() => { mainElement.scrollTop = 0; }, 100),
-          setTimeout(() => { mainElement.scrollTop = 0; }, 200),
-          setTimeout(() => { mainElement.scrollTop = 0; }, 400),
-          setTimeout(() => { mainElement.scrollTop = 0; }, 800),
-        ];
-        
-        // Disable scroll prevention after components have settled
-        setTimeout(() => {
-          scrollPreventionActive = false;
-          mainElement.removeEventListener('scroll', scrollHandler);
-          scrollTimeouts.forEach(clearTimeout);
-        }, 1500);
       }
     }
   }, []);

@@ -108,6 +108,21 @@ function Cart({ initialData }: { initialData: CartData }) {
     return sum + (item.price * item.quantity);
   }, 0);
 
+  const toAbsoluteImage = useCallback((path?: string) => {
+    if (!path) return path;
+    if (/^https?:\/\//i.test(path)) return path;
+    if (typeof window !== 'undefined') {
+      const origin = window.location.origin;
+      return `${origin}${path.startsWith('/') ? path : `/${path}`}`;
+    }
+    return path;
+  }, []);
+
+  const itemsWithAbsoluteImages = items.map(item => ({
+    ...item,
+    imagePath: toAbsoluteImage(item.imagePath),
+  }));
+
   const handleCheckout = async () => {
     const checkoutUrl = '/examples/bonsai-shop/checkout';
     console.log('[Cart] Sending checkout link event:', checkoutUrl);
@@ -162,7 +177,7 @@ function Cart({ initialData }: { initialData: CartData }) {
     setTimeout(() => setRemovingItemId(null), 3000);
   };
 
-  if (!cartData || items.length === 0) {
+  if (!cartData || itemsWithAbsoluteImages.length === 0) {
     return (
       <div 
         ref={cardRef}
@@ -237,11 +252,11 @@ function Cart({ initialData }: { initialData: CartData }) {
         borderBottom: '2px solid #334155',
         paddingBottom: '12px'
       }}>
-        🛒 Shopping Cart ({items.length} {items.length === 1 ? 'item' : 'items'})
+        🛒 Shopping Cart ({itemsWithAbsoluteImages.length} {itemsWithAbsoluteImages.length === 1 ? 'item' : 'items'})
       </h3>
 
       <div style={{ marginBottom: '16px' }}>
-        {items.map((item, index) => (
+        {itemsWithAbsoluteImages.map((item, index) => (
           <div
             key={item.id || index}
             style={{

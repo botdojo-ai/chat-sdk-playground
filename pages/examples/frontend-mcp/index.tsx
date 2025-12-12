@@ -330,3 +330,4 @@ function CounterApp() {
     </div>
   );
 }
+

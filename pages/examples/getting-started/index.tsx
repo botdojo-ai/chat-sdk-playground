@@ -98,7 +98,7 @@ Ask me anything to get started.
           Getting Started
         </h1>
         <p style={{ margin: '8px 0 0', fontSize: '15px', color: '#64748b', lineHeight: 1.7 }}>
-          Install the Chat SDK, clone a sample agent, and drop your public API key into the widget.
+          You can clone this playground website to experiment locally, or install the Chat SDK directly into your own app.
         </p>
       </div>
 
@@ -111,10 +111,10 @@ Ask me anything to get started.
         border: '1px solid rgba(99, 102, 241, 0.2)',
       }}>
         <h2 style={{ margin: '0 0 8px 0', fontSize: '20px', fontWeight: 700, color: '#0f172a' }}>
-          🚀 Quick Start
+          🚀 Quick Start: Clone and Run Locally
         </h2>
         <p style={{ margin: '0 0 16px 0', fontSize: '14px', color: '#64748b', lineHeight: 1.6 }}>
-          To run this SDK playground website locally and see all examples in action, run this command:
+          The quickest way to experiment is to clone this playground website and run it on your computer. This gives you a local copy with all examples ready to explore:
         </p>
         <div 
           className="relative rounded-lg p-3 font-mono text-sm"
@@ -131,15 +131,18 @@ Ask me anything to get started.
           <QuickStartCopyButton />
         </div>
         <p style={{ margin: '12px 0 0 0', fontSize: '13px', color: '#64748b' }}>
-          This will install the BotDojo CLI and start the playground with all examples configured.
+          This will install the BotDojo CLI and start the playground with all examples configured. Perfect for experimenting before integrating into your own app.
         </p>
       </div>
 
       {/* Install for Your Own App */}
       <div style={{ marginBottom: '32px' }}>
         <h2 style={{ margin: '0 0 16px 0', fontSize: '20px', fontWeight: 700, color: '#0f172a' }}>
-          Install for Your Own App
+          Install in Your Own App
         </h2>
+        <p style={{ margin: '0 0 20px 0', fontSize: '14px', color: '#64748b', lineHeight: 1.6 }}>
+          To integrate the Chat SDK into your own application, follow these steps to install the package, clone a sample agent, and create an API key.
+        </p>
         
         {/* Install SDK */}
         <div style={{

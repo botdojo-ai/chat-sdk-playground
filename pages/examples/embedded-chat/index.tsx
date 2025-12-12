@@ -165,62 +165,6 @@ function ArchitectureAnimation() {
 // ============================================================================
 
 export default function EmbeddedChatPage() {
-  // Prevent auto-scroll caused by iframe focus behavior
-  // Root cause: When BotDojoChat iframe loads, it focuses an input field inside.
-  // Browsers automatically scroll focused elements into view, which scrolls the parent page.
-  // Solution: Prevent scroll for the first 2 seconds after mount, then allow normal scrolling.
-  useEffect(() => {
-    const mainElement = document.querySelector('main');
-    if (!mainElement) return;
-
-    let scrollPreventionActive = true;
-    let scrollTimeouts: NodeJS.Timeout[] = [];
-
-    // Function to force scroll to top
-    const forceScrollToTop = () => {
-      if (mainElement && scrollPreventionActive) {
-        mainElement.scrollTop = 0;
-      }
-    };
-
-    // Prevent scroll events from moving us away from top during initial load
-    const handleScroll = (e: Event) => {
-      if (scrollPreventionActive && mainElement && mainElement.scrollTop > 0) {
-        // Prevent the scroll
-        e.preventDefault();
-        e.stopPropagation();
-        // Force back to top
-        requestAnimationFrame(() => {
-          forceScrollToTop();
-        });
-      }
-    };
-
-    // Scroll to top immediately and repeatedly to catch late-rendering iframes
-    forceScrollToTop();
-    scrollTimeouts.push(setTimeout(forceScrollToTop, 50));
-    scrollTimeouts.push(setTimeout(forceScrollToTop, 100));
-    scrollTimeouts.push(setTimeout(forceScrollToTop, 200));
-    scrollTimeouts.push(setTimeout(forceScrollToTop, 400));
-    scrollTimeouts.push(setTimeout(forceScrollToTop, 800));
-    scrollTimeouts.push(setTimeout(forceScrollToTop, 1500));
-
-    // Listen for scroll events and prevent unwanted scrolling
-    mainElement.addEventListener('scroll', handleScroll, { passive: false });
-
-    // Disable scroll prevention after iframe has loaded and settled
-    const disableTimeout = setTimeout(() => {
-      scrollPreventionActive = false;
-    }, 2000);
-
-    return () => {
-      scrollPreventionActive = false;
-      scrollTimeouts.forEach(clearTimeout);
-      mainElement.removeEventListener('scroll', handleScroll);
-      clearTimeout(disableTimeout);
-    };
-  }, []);
-
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
       {/* Header */}

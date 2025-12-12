@@ -1,9 +1,5 @@
 /** @type {import('next').NextConfig} */
-const ALLOWED_PROXY_ORIGIN = 'http://mcp-app-proxy.botdojo.com';
-const ALLOWED_PROXY_ORIGIN_HTTPS = 'https://mcp-app-proxy.botdojo.com';
-const LOCAL_DEV_ORIGIN = 'http://localhost:3500';
-const TEST_SITE_ORIGIN = 'http://test-site-a.local:3500';
-const TEST_SITE_ORIGIN_HTTPS = 'https://test-site-a.local:3500';
+
 const FRAME_ANCESTORS = ["*"];
 
 const path = require('path');
