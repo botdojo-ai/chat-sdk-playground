@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useMcpApp } from '../../../../../../mcp-app/src/react';
+import { useMcpApp } from '@botdojo/chat-sdk/mcp-app-view/react';
 
 /**
  * Enhancement MCP App using useMcpApp hook

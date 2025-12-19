@@ -18,9 +18,7 @@
     "paths": {
       "@/*": ["./src/*"],
       "@/samples/*": ["./samples/*"],
-      "@generated/*": ["./@generated/*"],
-      "@botdojo/chat-sdk/mcp-app-view/react": ["../mcp-app/src/react"],
-      "@botdojo/chat-sdk/mcp-app-view": ["../mcp-app/src"]
+      "@generated/*": ["./@generated/*"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
