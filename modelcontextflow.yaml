@@ -1,0 +1,230 @@
+edges:
+  - id: botdojo/node/start_f495f-text_input-botdojo/node/language_model_agent_cacd9-text_input
+    label: text_input
+    source: botdojo/node/start_f495f
+    target: botdojo/node/language_model_agent_cacd9
+    sourceName: text_input
+    targetName: text_input
+  - id: botdojo/node/language_model_agent_cacd9-text_output-botdojo/node/end_bffa3-text_output
+    label: text_output
+    source: botdojo/node/language_model_agent_cacd9
+    target: botdojo/node/end_bffa3
+    sourceName: text_output
+    targetName: text_output
+  - id: botdojo/node/buffer_memory_529c9-memory-botdojo/node/language_model_agent_cacd9-memory
+    label: memory
+    source: botdojo/node/buffer_memory_529c9
+    target: botdojo/node/language_model_agent_cacd9
+    sourceName: memory
+    targetName: memory
+  - id: botdojo/node/model_context/canvas_a8590-modelContext-botdojo/node/language_model_agent_cacd9-modelContexts
+    label: modelContext
+    source: botdojo/node/model_context/canvas_a8590
+    target: botdojo/node/language_model_agent_cacd9
+    sourceName: modelContext
+    targetName: modelContexts
+nodes:
+  - id: botdojo/node/start_f495f
+    icon: "@mui/icons-material/Start"
+    label: Start
+    version: "1.0"
+    position:
+      x: 971.3243528042408
+      y: 504.23054546359594
+    properties:
+      inputSchema:
+        schemaId: custom
+        jsonSchema:
+          type: object
+          title: Text Input
+          required:
+            - text_input
+          properties:
+            text_input:
+              type: string
+              botdojo_order: 0
+    definitionId: botdojo/node/start
+    outputOptions: {}
+  - id: botdojo/node/end_bffa3
+    icon: "@mui/icons-material/Output"
+    label: End
+    version: "1.0"
+    position:
+      x: 1840.9758697430086
+      y: 547.5214165696705
+    properties:
+      outputSchema:
+        schemaId: custom
+        jsonSchema:
+          type: object
+          title: Text Output
+          required:
+            - text_output
+          properties:
+            text_output:
+              type: string
+              botdojo_order: 0
+    definitionId: botdojo/node/end
+    outputOptions: {}
+  - id: botdojo/node/language_model_agent_cacd9
+    icon: /integrations/openai-white.svg
+    label: AI Agent
+    version: ""
+    position:
+      x: 1527.5120651284958
+      y: 397.54554682666196
+    properties:
+      maxIterations: 10
+      modelContexts: true
+      functionConfig:
+        inputSchema:
+          schemaId: custom
+          jsonSchema:
+            type: object
+            title: Text Input
+            required:
+              - text_input
+            properties:
+              text_input:
+                type: string
+                botdojo_order: 0
+        outputSchema:
+          schemaId: custom
+          jsonSchema:
+            type: object
+            title: Text Output
+            required:
+              - text_output
+            properties:
+              text_output:
+                type: string
+                botdojo_order: 0
+        languageModel:
+          model_id: gpt-4.1
+          provider_id: botdojo/integration/provider/openai
+        promptTemplate:
+          messages:
+            - id: 7aabd5c0-a2a5-11ef-9708-2d7a5f6b8c77
+              role: system
+              template: |-
+                You are a helpful agent.
+
+                {{{_MODEL_CONTEXT_CARDS}}}
+            - id: 8a5fc350-a2a5-11ef-9708-2d7a5f6b8c77
+              role: chat_history_placeholder
+              historyKey: chat_history
+            - id: 7aabd5c1-a2a5-11ef-9708-2d7a5f6b8c77
+              role: user
+              template: "{{text_input}}"
+        languageModelOptions:
+          modelId: gpt-4.1
+          streamToChat: always
+        providerSpecificConfig: {}
+      formatCitations: true
+      hideStepDetails: false
+      showStepsToUser: true
+      validateOutputTries: 3
+      finalOutputPromptTries: 3
+      useParallelToolCalling: true
+      warningThresholdMessage: null
+      customFinalOutputMessage: null
+      disableFinalOutputMessage: false
+      warningThresholdIteration: null
+    definitionId: botdojo/node/language_model_agent/v2
+    outputOptions: {}
+  - id: botdojo/node/buffer_memory_529c9
+    icon: "@mui/icons-material/Memory"
+    label: Buffer Memory
+    version: "1.0"
+    position:
+      x: 970.7550597003228
+      y: -183.37663502772216
+    properties:
+      memoryKey: buffer_memory
+      numberOfMessages: 35
+      userMessageBehavior: default
+    definitionId: botdojo/node/buffer_memory
+    outputOptions: {}
+  - id: botdojo/node/control/note_9a234
+    icon: "@mui/icons-material/StickyNote2"
+    label: External Frontend MCP
+    width: 540
+    height: 248
+    version: "1.0"
+    position:
+      x: 408.86195385487116
+      y: 170.97315605568775
+    properties:
+      content:
+        color: primary
+        markdown: |-
+          This connects to the shared websocket channel
+          to dynamically get tool calls and instructions.
+
+          The tools it has access to vary based on
+          the connected channel.
+
+          See [Advanced Interactive Embedded Widget](https://docs.botdojo.com/docs/deploy/chat/embedded-widget#advanced-interactive-embedded-widget-tools--custom-cards)
+          for more information on how this MCP works.
+    definitionId: botdojo/node/control/note
+    outputOptions: {}
+  - id: botdojo/node/model_context/canvas_a8590
+    icon: "@mui/icons-material/TravelExplore"
+    label: External UI
+    version: "1.0"
+    position:
+      x: 977.404786994212
+      y: 244.44837178760753
+    properties: {}
+    definitionId: botdojo/node/model_context/canvas
+    outputOptions: {}
+  - id: botdojo/node/control/note_dd7f4
+    icon: "@mui/icons-material/StickyNote2"
+    label: Product Card Canvas
+    width: 541
+    height: 561
+    version: "1.0"
+    position:
+      x: 393.4316410068167
+      y: -529.0372152971806
+    properties:
+      content:
+        color: primary
+        markdown: |-
+          This is a code node tool that the agent calls
+          to create a custom card in the chat for users to interact with.
+
+          The Canvas has this structure:
+          ```javascript
+          	{
+          		canvasId: null,
+          		canvasType: 'dojo-canvas',
+          		canvasData: {
+          			url: 'http://localhost:8894/iframe.html',
+          			display:'no-border',
+          			show_inline:true,
+          			agent_enabled:true,
+          			height:600
+          		}
+          	}
+          ```
+          The canvasData means:
+    definitionId: botdojo/node/control/note
+    outputOptions: {}
+definition:
+  name: Test - External Model Context
+  categories: []
+  chatConfig:
+    welcomeMessage: >-
+      
+      ## Weclome to the test change widget
+
+
+      <promptbutton label="iPhone 10 - $799" body='{"text_input": "I want to see
+      the new iPhone 10"}'>Option C</promptbutton>
+    customErrorMessage: ""
+  properties: []
+  description: Example Flow for interacting with a canvas
+  readmeMarkdown: ""
+  packageExportTypes: []
+propertyOverrides: []

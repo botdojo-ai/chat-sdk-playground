@@ -1,0 +1,202 @@
+[
+  {
+    "id": "1",
+    "name": "Classic Japanese Maple Bonsai",
+    "category": "tree",
+    "price": 299.99,
+    "description": "A stunning Japanese Maple with vibrant red leaves. Perfect for indoor or outdoor display.",
+    "inStock": true,
+    "imagePrompt": "a beautiful miniature Japanese Maple bonsai tree with bright red leaves in a ceramic pot",
+    "imagePath": "/images/products/product-1.png"
+  },
+  {
+    "id": "2",
+    "name": "Ancient Pine Bonsai",
+    "category": "tree",
+    "price": 449.99,
+    "description": "Majestic pine bonsai with aged bark and elegant silhouette. 15 years old.",
+    "inStock": true,
+    "imagePrompt": "an aged pine bonsai tree with twisted trunk and green needles in a traditional pot",
+    "imagePath": "/images/products/product-2.png"
+  },
+  {
+    "id": "3",
+    "name": "Cherry Blossom Bonsai",
+    "category": "tree",
+    "price": 379.99,
+    "description": "Delicate cherry blossom bonsai that blooms with pink flowers in spring.",
+    "inStock": true,
+    "imagePrompt": "a cherry blossom bonsai tree with pink flowers blooming on delicate branches",
+    "imagePath": "/images/products/product-3.png"
+  },
+  {
+    "id": "4",
+    "name": "Jade Plant Bonsai",
+    "category": "tree",
+    "price": 129.99,
+    "description": "Easy-care jade plant shaped as a bonsai. Great for beginners.",
+    "inStock": true,
+    "imagePrompt": "a jade plant bonsai with thick succulent leaves and woody trunk in a small pot",
+    "imagePath": "/images/products/product-4.png"
+  },
+  {
+    "id": "5",
+    "name": "Juniper Cascade Bonsai",
+    "category": "tree",
+    "price": 349.99,
+    "description": "Graceful juniper in cascade style, trained to flow over the edge of its pot.",
+    "inStock": true,
+    "imagePrompt": "a juniper bonsai tree in cascade style flowing downward with green foliage",
+    "imagePath": "/images/products/product-5.png"
+  },
+  {
+    "id": "6",
+    "name": "Bonsai Care Microfiber Towel Set",
+    "category": "towel",
+    "price": 24.99,
+    "description": "Set of 3 soft microfiber towels with bonsai tree prints. Perfect for cleaning and drying.",
+    "inStock": true,
+    "imagePrompt": "three folded microfiber towels with artistic bonsai tree patterns printed on them",
+    "imagePath": "/images/products/product-6.png"
+  },
+  {
+    "id": "7",
+    "name": "Zen Garden Hand Towels",
+    "category": "towel",
+    "price": 19.99,
+    "description": "Bamboo fiber hand towels featuring minimalist bonsai designs.",
+    "inStock": true,
+    "imagePrompt": "elegant hand towels with minimalist zen bonsai tree designs in earth tones",
+    "imagePath": "/images/products/product-7.png"
+  },
+  {
+    "id": "8",
+    "name": "Premium Waffle Weave Bonsai Towel",
+    "category": "towel",
+    "price": 34.99,
+    "description": "Luxury waffle weave towel with embroidered bonsai motif.",
+    "inStock": true,
+    "imagePrompt": "a textured waffle weave towel with an embroidered bonsai tree design",
+    "imagePath": "/images/products/product-8.png"
+  },
+  {
+    "id": "9",
+    "name": "Beach Towel - Sunset Bonsai",
+    "category": "towel",
+    "price": 39.99,
+    "description": "Large beach towel featuring a stunning sunset bonsai illustration.",
+    "inStock": true,
+    "imagePrompt": "a large beach towel with a vibrant sunset and silhouette of a bonsai tree",
+    "imagePath": "/images/products/product-9.png"
+  },
+  {
+    "id": "10",
+    "name": "Bonsai Enthusiast Baseball Cap",
+    "category": "hat",
+    "price": 29.99,
+    "description": "Comfortable cotton cap with embroidered bonsai logo. Adjustable strap.",
+    "inStock": true,
+    "imagePrompt": "a black baseball cap with an embroidered bonsai tree logo on the front",
+    "imagePath": "/images/products/product-10.png"
+  },
+  {
+    "id": "11",
+    "name": "Zen Master Wide Brim Hat",
+    "category": "hat",
+    "price": 44.99,
+    "description": "Stylish wide-brim hat perfect for tending your bonsai garden.",
+    "inStock": true,
+    "imagePrompt": "a cream colored wide brim sun hat with a small bonsai tree embroidery",
+    "imagePath": "/images/products/product-11.png"
+  },
+  {
+    "id": "12",
+    "name": "Winter Beanie - Bonsai Grove",
+    "category": "hat",
+    "price": 24.99,
+    "description": "Warm knit beanie with bonsai forest pattern.",
+    "inStock": true,
+    "imagePrompt": "a cozy knit winter beanie with a pattern of small bonsai trees",
+    "imagePath": "/images/products/product-12.png"
+  },
+  {
+    "id": "13",
+    "name": "Bucket Hat - Minimalist Bonsai",
+    "category": "hat",
+    "price": 34.99,
+    "description": "Trendy bucket hat with minimalist bonsai line art.",
+    "inStock": true,
+    "imagePrompt": "a olive green bucket hat with simple line art drawings of bonsai trees",
+    "imagePath": "/images/products/product-13.png"
+  },
+  {
+    "id": "14",
+    "name": "Cozy Bonsai Pet Sweater (Small)",
+    "category": "pet-sweater",
+    "price": 34.99,
+    "description": "Adorable sweater for small dogs and cats featuring bonsai tree design.",
+    "inStock": true,
+    "imagePrompt": "a small knit pet sweater with a cute bonsai tree pattern for dogs or cats",
+    "imagePath": "/images/products/product-14.png"
+  },
+  {
+    "id": "15",
+    "name": "Deluxe Bonsai Pet Sweater (Medium)",
+    "category": "pet-sweater",
+    "price": 39.99,
+    "description": "Premium knit sweater for medium-sized pets. Warm and stylish.",
+    "inStock": true,
+    "imagePrompt": "a medium sized pet sweater in forest green with embroidered bonsai design",
+    "imagePath": "/images/products/product-15.png"
+  },
+  {
+    "id": "16",
+    "name": "Zen Garden Pet Hoodie",
+    "category": "pet-sweater",
+    "price": 44.99,
+    "description": "Hoodie for pets with zen garden and bonsai artwork. Includes hood with ears.",
+    "inStock": true,
+    "imagePrompt": "a cute pet hoodie with zen garden and bonsai tree print and small hood with ears",
+    "imagePath": "/images/products/product-16.png"
+  },
+  {
+    "id": "17",
+    "name": "Elegant Elm Bonsai",
+    "category": "tree",
+    "price": 259.99,
+    "description": "Chinese Elm bonsai with beautiful branch structure and small leaves.",
+    "inStock": true,
+    "imagePrompt": "a Chinese Elm bonsai tree with delicate branch structure and tiny green leaves",
+    "imagePath": "/images/products/product-17.png"
+  },
+  {
+    "id": "18",
+    "name": "Ficus Retusa Bonsai",
+    "category": "tree",
+    "price": 199.99,
+    "description": "Hardy ficus with aerial roots and glossy leaves. Ideal for beginners.",
+    "inStock": true,
+    "imagePrompt": "a Ficus bonsai tree with aerial roots and shiny dark green leaves in a pot",
+    "imagePath": "/images/products/product-18.png"
+  },
+  {
+    "id": "19",
+    "name": "Bonsai Lover's Fleece Blanket",
+    "category": "towel",
+    "price": 54.99,
+    "description": "Ultra-soft fleece blanket with all-over bonsai forest print.",
+    "inStock": true,
+    "imagePrompt": "a cozy fleece blanket with a repeating pattern of various bonsai trees",
+    "imagePath": "/images/products/product-19.png"
+  },
+  {
+    "id": "20",
+    "name": "Luxury Pet Kimono Sweater",
+    "category": "pet-sweater",
+    "price": 49.99,
+    "description": "Traditional Japanese-style kimono sweater for pets with bonsai motif.",
+    "inStock": true,
+    "imagePrompt": "a pet kimono style sweater with traditional Japanese patterns and bonsai design",
+    "imagePath": "/images/products/product-20.png"
+  }
+]

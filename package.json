@@ -1,0 +1,79 @@
+{
+  "name": "interactive-agent-sdk-playground",
+  "version": "0.0.39",
+  "description": "Interactive Agent SDK - Build AI agents that see and act in your app. Built on open MCP standards for tool integration and MCP Apps for rich UI experiences.",
+  "scripts": {
+    "setup": "bash scripts/setup.sh",
+    "dev": "concurrently -n next,bundle,samples -c cyan,yellow,magenta \"next dev -p 3500\" \"npm run bundle:mcp-app:watch\" \"npm run generate:samples:watch\"",
+    "dev:next": "next dev -p 3500",
+    "dev:ngrok": "node scripts/dev-ngrok.js",
+    "generate:samples": "node scripts/generate-samples.js",
+    "generate:samples:watch": "node scripts/generate-samples.js --watch",
+    "build": "npm run generate:samples && npm run bundle:mcp-app && next build",
+    "start": "next start -p 3500",
+    "lint": "next lint",
+    "clean": "rm -rf .next node_modules dist",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "install:test-deps": "npm install --no-save puppeteer",
+    "bundle:mcp-app": "node scripts/bundle-mcp-app.js pages/examples/mcp-app-example/widgets/remote-url-app.tsx && node scripts/bundle-mcp-app.js pages/examples/document-edit/widgets/review.tsx && node scripts/bundle-mcp-app.js pages/examples/document-edit/widgets/review-mcp-app.tsx && node scripts/bundle-mcp-app.js pages/examples/bonsai-shop/widgets/product-card.tsx && node scripts/bundle-mcp-app.js pages/examples/bonsai-shop/widgets/cart.tsx && node scripts/bundle-mcp-app.js pages/examples/bonsai-shop/widgets/checkout-summary.tsx && node scripts/bundle-mcp-app.js pages/examples/product-enhance/widgets/enhance-mcp-app.tsx && node scripts/bundle-mcp-app.js pages/examples/mcp-apps/widgets/streaming-demo-app.tsx && node scripts/bundle-mcp-app.js pages/examples/headless-chat/widgets/weather.tsx",
+    "bundle:mcp-app:watch": "concurrently \"node scripts/bundle-mcp-app.js --watch pages/examples/mcp-app-example/widgets/remote-url-app.tsx\" \"node scripts/bundle-mcp-app.js --watch pages/examples/document-edit/widgets/review.tsx\" \"node scripts/bundle-mcp-app.js --watch pages/examples/document-edit/widgets/review-mcp-app.tsx\" \"node scripts/bundle-mcp-app.js --watch pages/examples/bonsai-shop/widgets/product-card.tsx\" \"node scripts/bundle-mcp-app.js --watch pages/examples/bonsai-shop/widgets/cart.tsx\" \"node scripts/bundle-mcp-app.js --watch pages/examples/bonsai-shop/widgets/checkout-summary.tsx\" \"node scripts/bundle-mcp-app.js --watch pages/examples/product-enhance/widgets/enhance-mcp-app.tsx\" \"node scripts/bundle-mcp-app.js --watch pages/examples/mcp-apps/widgets/streaming-demo-app.tsx\" \"node scripts/bundle-mcp-app.js --watch pages/examples/headless-chat/widgets/weather.tsx\""
+  },
+  "dependencies": {
+    "@botdojo/chat-sdk": "0.0.28",
+    "@mdxeditor/editor": "^3.10.0",
+    "next": "13.5.6",
+    "prism-react-renderer": "^2.3.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.2.0",
+    "@types/uuid": "^9.0.0",
+    "autoprefixer": "^10.4.0",
+    "chokidar": "^3.6.0",
+    "concurrently": "^9.2.1",
+    "esbuild": "^0.27.1",
+    "jest": "^29.5.0",
+    "postcss": "^8.4.0",
+    "tailwindcss": "^3.4.0",
+    "ts-jest": "^29.1.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.4.5"
+  },
+  "keywords": [
+    "botdojo",
+    "interactive-agent-sdk",
+    "chat-sdk",
+    "playground",
+    "mcp",
+    "mcp-apps",
+    "ai",
+    "agent",
+    "agentic-ui",
+    "agentic-ui",
+    "react",
+    "nextjs",
+    "demo",
+    "examples"
+  ],
+  "author": {
+    "name": "BotDojo",
+    "url": "https://botdojo.com"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/botdojo-ai/chat-sdk-playground",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/botdojo-ai/chat-sdk-playground"
+  },
+  "bugs": {
+    "url": "https://github.com/botdojo-ai/chat-sdk-playground/issues"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
