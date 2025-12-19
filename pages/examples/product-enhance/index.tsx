@@ -45,7 +45,6 @@ export default function ProductEnhance({ sourceFiles }: ProductEnhanceProps) {
   const [chatControl, setChatControl] = useState<BotDojoChatControl | null>(null);
   const chatControlRef = useRef<BotDojoChatControl | null>(null);
   const [sending, setSending] = useState(false);
-  const [chatReady, setChatReady] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [activeCodeTab, setActiveCodeTab] = useState('page');
   const descriptionRef = useRef(description);
@@ -86,8 +85,6 @@ export default function ProductEnhance({ sourceFiles }: ProductEnhanceProps) {
   const setShowChatWithUrl = (isOpen: boolean) => {
     setShowChat(isOpen);
     updateChatUrlParam(isOpen);
-    // Note: chatReady persists since BotDojoChat stays mounted
-    // This allows the button to work immediately when reopening
   };
 
   useEffect(() => {
@@ -97,19 +94,6 @@ export default function ProductEnhance({ sourceFiles }: ProductEnhanceProps) {
   useEffect(() => {
     debugLoggerRef.current = debugLogger;
   }, [debugLogger]);
-
-  // Effect to send pending prompt when both chatReady and chatControl are available
-  // This handles the race condition between onBotDojoChatControl and onReady callbacks
-  useEffect(() => {
-    if (chatReady && chatControl && pendingPromptRef.current) {
-      const prompt = pendingPromptRef.current;
-      pendingPromptRef.current = null;
-      console.log('[ProductEnhance] Sending pending prompt via effect');
-      chatControl.sendFlowRequest({ text_input: prompt })
-        .catch((error) => console.error('Error sending prompt:', error))
-        .finally(() => setSending(false));
-    }
-  }, [chatReady, chatControl]);
 
   const modelContext: ModelContext = useMemo(() => ({
     name: 'product_enhance',
@@ -252,8 +236,15 @@ export default function ProductEnhance({ sourceFiles }: ProductEnhanceProps) {
 
   const handleChatReady = useCallback(() => {
     console.log('[ProductEnhance] Chat ready callback fired');
-    setChatReady(true);
-    // Note: Pending prompt is now handled by the useEffect that watches both chatReady and chatControl
+    // Send any pending prompt immediately
+    if (pendingPromptRef.current && chatControlRef.current) {
+      const prompt = pendingPromptRef.current;
+      pendingPromptRef.current = null;
+      console.log('[ProductEnhance] Sending pending prompt from onReady');
+      chatControlRef.current.sendFlowRequest({ text_input: prompt })
+        .catch((error) => console.error('Error sending prompt:', error))
+        .finally(() => setSending(false));
+    }
   }, []);
 
   const handleEnhanceClick = useCallback(async () => {
@@ -264,8 +255,8 @@ export default function ProductEnhance({ sourceFiles }: ProductEnhanceProps) {
       setShowChatWithUrl(true);
     }
     
-    // If chat is ready and control is available, send immediately
-    if (chatReady && chatControl) {
+    // If chat control is available, send immediately; otherwise queue it
+    if (chatControl) {
       setSending(true);
       try {
         await chatControl.sendFlowRequest({ text_input: prompt });
@@ -275,12 +266,12 @@ export default function ProductEnhance({ sourceFiles }: ProductEnhanceProps) {
         setSending(false);
       }
     } else {
-      // Store the prompt to send when chat becomes ready (handled by useEffect)
+      // Queue the prompt - will be sent when onReady fires
       console.log('[ProductEnhance] Queueing prompt for when chat is ready');
       pendingPromptRef.current = prompt;
       setSending(true);
     }
-  }, [showChat, chatReady, chatControl]);
+  }, [showChat, chatControl]);
 
   // Handle token loading state
   if (tokenLoading) {
