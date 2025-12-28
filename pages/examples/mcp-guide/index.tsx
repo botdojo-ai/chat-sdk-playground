@@ -816,7 +816,6 @@ connect-src 'none';`}
     "ui/resourceUri": getRemoteUrlCanvasUrl(),
     // BotDojo extensions
     ui: {
-      prefersProxy: false,  // Direct load (same origin as host)
       csp: { 
         connectDomains: [localOrigin], 
         resourceDomains: [localOrigin] 
@@ -871,7 +870,6 @@ connect-src 'none';`}
   description: 'Propose an updated markdown string and show a diff in a BotDojo MCP App.',
   _meta: {
     "ui/resourceUri": buildCanvasUrl('suggest-update'),
-    ui: { prefersProxy: false },
   },
   execute: async (params: { updated_markdown: string; summary?: string }, context) => {
     const before = markdownRef.current;

@@ -110,7 +110,6 @@ export default function McpAppExample() {
         _meta: {
           ui: {
             resourceUri: getMcpAppUrl(),
-            prefersProxy: true, // Route through mcp-app-proxy for sandboxing
             csp: {
               connectDomains: [localOrigin],
               resourceDomains: [localOrigin],
@@ -160,10 +159,9 @@ export default function McpAppExample() {
           required: ['go'],
         },
         _meta: {
+          'botdojo/no-cache': true,
           ui: {
-            resourceUri: 'ui://mcp-app-demo/context/cache_buster/example_mcp_app',
-            prefersProxy: true,
-           
+            resourceUri: 'ui://mcp-app-demo/example_mcp_app',
           },
         },
         execute: async (_args: any, context?: ToolExecutionContext) => {
@@ -200,7 +198,7 @@ export default function McpAppExample() {
     ],
     resources: [
       {
-        uri: 'ui://mcp-app-demo/context/cache_buster/example_mcp_app',
+        uri: 'ui://mcp-app-demo/example_mcp_app',
         name: 'Inline MCP HTML App',
         description: 'Inline MCP Apps HTML resource for ui/message + counter persistence',
         mimeType: 'text/html;profile=mcp-app',
@@ -243,7 +241,6 @@ const modelContext = useMemo<ModelContext>(() => ({
         _meta: {
           ui: {
             resourceUri: getMcpAppUrl(),
-            prefersProxy: true, // Route through mcp-app-proxy for sandboxing
           },
         },
         execute: async (_args: any, context?: ToolExecutionContext) => {
@@ -289,6 +286,7 @@ const modelContext = useMemo<ModelContext>(() => ({
           required: ['go'],
         },
         _meta: {
+          'botdojo/no-cache': true,
           ui: {
             resourceUri: 'ui://mcp-app-demo/html',
           },

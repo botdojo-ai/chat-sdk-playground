@@ -57,6 +57,7 @@ function EnhanceMcpApp() {
   const [streamingText, setStreamingText] = useState<string>('');
   const [originalText, setOriginalText] = useState<string>('');
   
+  
   const {
     isInitialized,
     hostContext,
@@ -67,6 +68,12 @@ function EnhanceMcpApp() {
   } = useMcpApp({
     containerRef: cardRef,
     autoReportSize: true,
+    /**
+     * TIP: Use onToolInputPartial to capture streaming tool arguments.
+     * 
+     * Why: As the LLM generates tool arguments, you receive partial updates.
+     * This enables real-time preview of content while the AI is still typing.
+     */
     onToolInputPartial: (params) => {
       console.log('[enhance-mcp-app] onToolInputPartial:', JSON.stringify(params, null, 2));
       const args = params.arguments as Record<string, unknown> | undefined;
@@ -95,8 +102,13 @@ function EnhanceMcpApp() {
       }
     },
   });
-  
-  // Clear streaming and show comparison when tool completes
+
+  /**
+   * TIP: Use tool.result to detect when the tool execution completes.
+   * 
+   * Why: tool.result is set when the execute function returns. This is the
+   * signal to transition from streaming state to the final UI state.
+   */
   useEffect(() => {
     if (tool.result) {
       // Short delay to show completed text before transition
@@ -125,7 +137,13 @@ function EnhanceMcpApp() {
   
   const isApplied = localApplied || payload?.applied || derivedFromState?.applied;
   
-  // Manual size reporting when content changes
+  /**
+   * TIP: Report size changes when content updates dynamically.
+   * 
+   * Why: The host iframe needs to know the content size to resize properly.
+   * autoReportSize handles initial load, but dynamic content changes may need
+   * manual reportSize calls for smooth resizing.
+   */
   const manualReportSize = useCallback(() => {
     if (!cardRef.current) return;
     const rect = cardRef.current.getBoundingClientRect();
@@ -165,7 +183,12 @@ function EnhanceMcpApp() {
     };
   }, [manualReportSize]);
 
-  // Load persisted applied state on mount
+  /**
+   * TIP: Use hostContext.state to restore UI state on reload.
+   * 
+   * Why: When users refresh the page, hostContext.state contains the last
+   * persisted state. Use this to restore the UI to its previous state.
+   */
   useEffect(() => {
     const state = hostContext?.state as Record<string, unknown> | undefined;
     if (state?.applied) {
@@ -174,6 +197,12 @@ function EnhanceMcpApp() {
     }
   }, [hostContext?.state]);
 
+  /**
+   * TIP: Use callTool to call tools defined in the host ModelContext.
+   * 
+   * Why: MCP Apps can call back to the host to trigger actions. The tool name
+   * must match a tool defined in the host's ModelContext tools array.
+   */
   const applyVersion = useCallback(async (version: 'original' | 'modified') => {
     // Don't re-apply if already selected and applied
     if (version === selectedVersion && localApplied) return;
@@ -193,7 +222,13 @@ function EnhanceMcpApp() {
 
       setLocalApplied(true);
 
-      // Persist applied state
+      /**
+       * TIP: Use botdojo/persist to save state across page reloads.
+       * 
+       * Why: When users refresh, MCP App state is lost. Sending a 
+       * botdojo/persist message saves state to the session, which is
+       * restored in hostContext.state on next load.
+       */
       await client.sendRequest('ui/message', {
         role: 'user',
         content: {
@@ -220,7 +255,7 @@ function EnhanceMcpApp() {
   const isStandalone = typeof window !== 'undefined' && !window.parent?.postMessage;
   
   if (!isInitialized && !isStandalone) {
-    return <></>
+    return <>hmm</>
   }
   
   // For standalone preview, show mock data

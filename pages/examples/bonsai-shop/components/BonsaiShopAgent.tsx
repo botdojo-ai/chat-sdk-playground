@@ -258,13 +258,13 @@ export default function BonsaiShopAgent({ isOpen }: BonsaiShopAgentProps) {
     resources: [
       {
         name: 'card',
-        uri: 'bonsai-shop://context/cache_buster/card',
+        uri: 'bonsai-shop://context/card',
         description: 'Bonsai shop assistant context with cart state and guidelines',
         mimeType: 'text/plain',
         getContent: async () => buildResourceContent(cartRef.current, currentPageContextRef.current),
       },
       {
-        uri: 'ui://bonsai-shop/context/cache_buster/product-card',
+        uri: 'ui://bonsai-shop/product-card',
         name: 'Product Card MCP App',
         description: 'MCP App for displaying product details with add-to-cart functionality',
         mimeType: 'text/html;profile=mcp-app',
@@ -273,7 +273,7 @@ export default function BonsaiShopAgent({ isOpen }: BonsaiShopAgentProps) {
           // Get current origin for CSP resourceDomains (allows loading images from this origin)
           const origin = typeof window !== 'undefined' ? window.location.origin : '';
           return {
-            uri: 'ui://bonsai-shop/context/cache_buster/product-card',
+            uri: 'ui://bonsai-shop/product-card',
             mimeType: 'text/html;profile=mcp-app',
             text: await fetchMcpAppHtml('product-card'),
             _meta: {
@@ -287,7 +287,7 @@ export default function BonsaiShopAgent({ isOpen }: BonsaiShopAgentProps) {
         },
       },
       {
-        uri: 'ui://bonsai-shop/context/cache_buster/cart',
+        uri: 'ui://bonsai-shop/cart',
         name: 'Cart MCP App',
         description: 'MCP App for displaying shopping cart contents',
         mimeType: 'text/html;profile=mcp-app',
@@ -309,7 +309,7 @@ export default function BonsaiShopAgent({ isOpen }: BonsaiShopAgentProps) {
         },
       },
       {
-        uri: 'ui://bonsai-shop/context/cache_buster/checkout-summary',
+        uri: 'ui://bonsai-shop/checkout-summary',
         name: 'Checkout Summary MCP App',
         description: 'MCP App for displaying checkout summary',
         mimeType: 'text/html;profile=mcp-app',
@@ -318,7 +318,7 @@ export default function BonsaiShopAgent({ isOpen }: BonsaiShopAgentProps) {
           const origin = typeof window !== 'undefined' ? window.location.origin : '';
        
           return {
-            uri: 'ui://bonsai-shop/context/cache_buster/checkout-summary',
+            uri: 'ui://bonsai-shop/checkout-summary',
             mimeType: 'text/html;profile=mcp-app',
             text: await fetchMcpAppHtml('checkout-summary'),
             _meta: {
@@ -464,7 +464,8 @@ export default function BonsaiShopAgent({ isOpen }: BonsaiShopAgentProps) {
         },
         _meta: {
           'botdojo/display-name': 'Show Product Card',
-          ui: { resourceUri: 'ui://bonsai-shop/context/cache_buster/product-card', prefersProxy: true },
+          'botdojo/no-cache': true,
+          ui: { resourceUri: 'ui://bonsai-shop/product-card' },
         },
         execute: async (params: { product_id: string }, context?: ToolExecutionContext) => {
           context?.notifyToolInputPartial?.({ product_id: params.product_id });
@@ -482,7 +483,8 @@ export default function BonsaiShopAgent({ isOpen }: BonsaiShopAgentProps) {
         },
         _meta: {
           'botdojo/display-name': 'Show Cart',
-          ui: { resourceUri: 'ui://bonsai-shop/context/cache_buster/cart', prefersProxy: true },
+          'botdojo/no-cache': true,
+          ui: { resourceUri: 'ui://bonsai-shop/cart' },
         },
         execute: async (params: { message?: string }, context?: ToolExecutionContext) => {
           context?.notifyToolInputPartial?.({ fetchCart: true });
@@ -500,7 +502,8 @@ export default function BonsaiShopAgent({ isOpen }: BonsaiShopAgentProps) {
         },
         _meta: {
           'botdojo/display-name': 'Checkout',
-          ui: { resourceUri: 'ui://bonsai-shop/context/cache_buster/checkout-summary', prefersProxy: true },
+          'botdojo/no-cache': true,
+          ui: { resourceUri: 'ui://bonsai-shop/checkout-summary' },
         },
         execute: async (params: { confirm?: boolean }, context?: ToolExecutionContext) => {
           context?.notifyToolInputPartial?.({ fetchCart: true });

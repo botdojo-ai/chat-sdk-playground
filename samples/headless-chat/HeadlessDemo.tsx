@@ -55,14 +55,14 @@ export default function HeadlessDemo({ onNewChat }: HeadlessDemoProps = {}) {
     // Define resources - what the agent can "see"
     resources: [
       {
-        uri: 'ui://headless-chat/context/cache_buster/weather',
+        uri: 'ui://headless-chat/weather',
         name: 'Weather Display Widget',
         description: 'Beautiful weather display MCP App showing current conditions and forecast',
         mimeType: 'text/html;profile=mcp-app',
         getContent: async () => {
           const { fetchMcpAppHtml } = await import('@/utils/fetchMcpApp');
           return {
-            uri: 'ui://headless-chat/context/cache_buster/weather',
+            uri: 'ui://headless-chat/weather',
             mimeType: 'text/html;profile=mcp-app',
             text: await fetchMcpAppHtml('weather'),
           };
@@ -85,9 +85,9 @@ export default function HeadlessDemo({ onNewChat }: HeadlessDemoProps = {}) {
         },
         // Reference the UI resource - this tells the system to render the MCP App
         _meta: {
+          'botdojo/no-cache': true,
           ui: {
-            resourceUri: 'ui://headless-chat/context/cache_buster/weather',
-            prefersProxy: true,
+            resourceUri: 'ui://headless-chat/weather',
           },
           'botdojo/display-name': 'Get Weather',
         },

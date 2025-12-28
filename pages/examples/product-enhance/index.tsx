@@ -46,6 +46,7 @@ export default function ProductEnhance({ sourceFiles }: ProductEnhanceProps) {
   const chatControlRef = useRef<BotDojoChatControl | null>(null);
   const [sending, setSending] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const [isChatReady, setIsChatReady] = useState(false);
   const [activeCodeTab, setActiveCodeTab] = useState('page');
   const descriptionRef = useRef(description);
   const appIdRef = useRef<string | null>(null);
@@ -87,6 +88,13 @@ export default function ProductEnhance({ sourceFiles }: ProductEnhanceProps) {
     updateChatUrlParam(isOpen);
   };
 
+  /**
+   * TIP: Use refs to access current state in tool execute functions.
+   * 
+   * Why: Tool execute functions inside useMemo capture state from when the memo
+   * was created. Without refs, you'd get stale values. The ref always points to
+   * the current value, so descriptionRef.current is always up-to-date.
+   */
   useEffect(() => {
     descriptionRef.current = description;
   }, [description]);
@@ -124,6 +132,10 @@ export default function ProductEnhance({ sourceFiles }: ProductEnhanceProps) {
       },
       {
         name: 'suggestEnhancement',
+        /**
+         * TIP: Tool descriptions guide the AI's behavior.
+         * Be specific about what the tool does and when to use it.
+         */
         description: 'Propose an enhanced product description and show it in an MCP App for comparison.',
         inputSchema: {
           type: 'object',
@@ -137,15 +149,16 @@ export default function ProductEnhance({ sourceFiles }: ProductEnhanceProps) {
         },
         _meta: {
           'botdojo/display-name': 'Suggest Enhancement',
+       
+          /**
+           * TIP: The resourceUri must exactly match the resource uri defined below.
+           * This links the tool to its MCP App UI.
+           */
           ui: {
-            resourceUri: 'ui://product-enhance/context/cache_buster/product-enhance',
-            prefersProxy: true,
-
+            resourceUri: 'ui://product-enhance/enhance-card',
           },
         },
         execute: async (params: { enhanced_text: string; original_text?: string }, context?: ToolExecutionContext) => {
-          console.log('[suggestEnhancement] execute called with params:', params);
-          
           const original = descriptionRef.current;
           const enhanced = params.enhanced_text;
           const appId = appIdRef.current || `enhance-${uuidv4()}`;
@@ -158,7 +171,6 @@ export default function ProductEnhance({ sourceFiles }: ProductEnhanceProps) {
             applied: false,
           };
           setDescription(enhanced);
-          console.log('[suggestEnhancement] returning payload:', enhancePayload);
           return enhancePayload;
         },
       },
@@ -186,17 +198,18 @@ export default function ProductEnhance({ sourceFiles }: ProductEnhanceProps) {
     ],
     resources: [
       {
-        uri: 'ui://product-enhance/context/cache_buster/product-enhance',
+        /**
+         * TIP: The resource uri must exactly match the tool's _meta.ui.resourceUri.
+         */
+        uri: 'ui://product-enhance/enhance-card',
         name: 'Enhancement MCP App',
         description: 'MCP App for reviewing and applying description enhancements.',
         mimeType: 'text/html;profile=mcp-app',
         getContent: async () => {
-          console.log('[getContent] fetching enhance-mcp-app');
           const { fetchMcpAppHtml } = await import('@/utils/fetchMcpApp');
           const html = await fetchMcpAppHtml('enhance-mcp-app');
-          console.log('[getContent] got html, length:', html.length);
           return {
-            uri: 'ui://product-enhance/context/cache_buster/product-enhance',
+            uri: 'ui://product-enhance/enhance-card',
             mimeType: 'text/html;profile=mcp-app',
             text: html,
           };
@@ -229,34 +242,46 @@ export default function ProductEnhance({ sourceFiles }: ProductEnhanceProps) {
 
   // Memoized callbacks for BotDojoChat
   const handleBotDojoChatControl = useCallback((control: BotDojoChatControl) => {
-    console.log('[ProductEnhance] Chat control received');
     setChatControl(control);
     chatControlRef.current = control;
   }, []);
 
   const handleChatReady = useCallback(() => {
-    console.log('[ProductEnhance] Chat ready callback fired');
-    // Send any pending prompt immediately
-    if (pendingPromptRef.current && chatControlRef.current) {
-      const prompt = pendingPromptRef.current;
-      pendingPromptRef.current = null;
-      console.log('[ProductEnhance] Sending pending prompt from onReady');
-      chatControlRef.current.sendFlowRequest({ text_input: prompt })
-        .catch((error) => console.error('Error sending prompt:', error))
-        .finally(() => setSending(false));
-    }
+    setIsChatReady(true);
   }, []);
+
+  // Effect to send pending prompt when all conditions are met:
+  // - chatControl is available
+  // - isChatReady is true  
+  // - showChat is true (panel must be open for iframe to work)
+  // This handles the race condition between all the callbacks
+  useEffect(() => {
+    if (isChatReady && chatControl && showChat && pendingPromptRef.current) {
+      // Small delay to ensure the panel transition is complete and iframe is ready
+      const timeoutId = setTimeout(() => {
+        if (pendingPromptRef.current) {
+          const prompt = pendingPromptRef.current;
+          pendingPromptRef.current = null;
+          console.log('[ProductEnhance] Sending pending prompt via effect');
+          chatControl.sendFlowRequest({ text_input: prompt })
+            .catch((err) => console.error('[ProductEnhance] Failed to send pending prompt:', err))
+            .finally(() => setSending(false));
+        }
+      }, 150); // Slightly longer delay to account for panel animation
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isChatReady, chatControl, showChat]);
 
   const handleEnhanceClick = useCallback(async () => {
     const prompt = `Enhance the product description <!--- Current description: "${descriptionRef.current}" Update the description by calling the suggestEnhancement tool-->`;
-    
+
     // Open chat if not already open
     if (!showChat) {
       setShowChatWithUrl(true);
     }
-    
-    // If chat control is available, send immediately; otherwise queue it
-    if (chatControl) {
+
+    // If chat is ready, send immediately; otherwise queue it for when onReady fires
+    if (isChatReady && chatControl) {
       setSending(true);
       try {
         await chatControl.sendFlowRequest({ text_input: prompt });
@@ -267,11 +292,10 @@ export default function ProductEnhance({ sourceFiles }: ProductEnhanceProps) {
       }
     } else {
       // Queue the prompt - will be sent when onReady fires
-      console.log('[ProductEnhance] Queueing prompt for when chat is ready');
       pendingPromptRef.current = prompt;
       setSending(true);
     }
-  }, [showChat, chatControl]);
+  }, [showChat, isChatReady, chatControl]);
 
   // Handle token loading state
   if (tokenLoading) {
@@ -485,6 +509,7 @@ export default function ProductEnhance({ sourceFiles }: ProductEnhanceProps) {
             onReady={handleChatReady}
             onToolCall={handleToolCall}
             fontSize='15px'
+
             onUiMessage={(message: string, params: any, appId: string) => {
               debugLoggerRef.current?.logCanvasNotify(message, params, appId);
             }}
