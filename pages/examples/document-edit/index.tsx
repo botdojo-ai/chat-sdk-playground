@@ -107,7 +107,13 @@ export default function DocumentEdit({ sourceFiles }: DocumentEditProps) {
   
   const newSession = router.query['new-session'] === 'true' || router.query['newsession'] === 'true';
 
-  // Keep refs in sync
+  /**
+   * TIP: Use refs to access current state in tool execute functions.
+   * 
+   * Why: Tool execute functions inside useMemo capture state from when the memo
+   * was created. Without refs, you'd get stale values. The ref always points to
+   * the current value, so markdownRef.current is always up-to-date.
+   */
   useEffect(() => {
     markdownRef.current = markdown;
   }, [markdown]);
@@ -164,10 +170,13 @@ export default function DocumentEdit({ sourceFiles }: DocumentEditProps) {
         },
         _meta: {
           'botdojo/display-name': 'Suggest Changes',
+          'botdojo/no-cache': true,
+          /**
+           * TIP: The resourceUri must exactly match the resource uri defined below.
+           * This links the tool to its MCP App UI.
+           */
           ui: {
-            // Links this tool to the review MCP App
-            resourceUri: 'ui://ui-mcp/review/cache_buster',
-            prefersProxy: true,
+            resourceUri: 'ui://ui-mcp/review-diff',
           },
         },
         execute: async (
@@ -187,7 +196,13 @@ export default function DocumentEdit({ sourceFiles }: DocumentEditProps) {
             applied: false,
           };
 
-          // Stream data to MCP App as tool executes
+          /**
+           * TIP: Use notifyToolInputPartial to stream data to the MCP App.
+           * 
+           * Why: During tool execution, you can send partial updates to the UI
+           * before returning the final result. The MCP App receives these via
+           * the onToolInputPartial callback.
+           */
           context?.notifyToolInputPartial?.({ diffPayload });
 
           return diffPayload;
@@ -228,7 +243,10 @@ export default function DocumentEdit({ sourceFiles }: DocumentEditProps) {
       },
       // Review diff MCP App
       {
-        uri: 'ui://ui-mcp/review/cache_buster',
+        /**
+         * TIP: The resource uri must exactly match the tool's _meta.ui.resourceUri.
+         */
+        uri: 'ui://ui-mcp/review-diff',
         name: 'Review Changes MCP App',
         description: 'UI for reviewing and applying suggested changes.',
         mimeType: 'text/html;profile=mcp-app',
@@ -236,7 +254,7 @@ export default function DocumentEdit({ sourceFiles }: DocumentEditProps) {
           const { fetchMcpAppHtml } = await import('@/utils/fetchMcpApp');
           const html = await fetchMcpAppHtml('review-mcp-app');
           return {
-            uri: 'ui://ui-mcp/review/cache_buster',
+            uri: 'ui://ui-mcp/review-diff',
             mimeType: 'text/html;profile=mcp-app',
             text: html,
           };

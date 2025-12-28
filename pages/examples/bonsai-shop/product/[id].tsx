@@ -289,7 +289,7 @@ export default function ProductDetail() {
             </button>
 
             <Link
-              href="/bonsai-shop"
+              href="/examples/bonsai-shop"
               style={{
                 display: 'block',
                 textAlign: 'center',

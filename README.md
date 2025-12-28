@@ -70,14 +70,27 @@ Open [http://localhost:3500](http://localhost:3500) in your browser.
 
 ### Chat SDK Examples
 
-| Example | Description | Path |
-|---------|-------------|------|
-| **Getting Started** | Minimal inline widget example | `/examples/chat-sdk/getting-started` |
-| **Chat Widget Modes** | Popup, side panel, inline configurations | `/examples/chat-sdk/basic` |
-| **Headless Chat + MCP Apps** | Build your own UI with SDK hooks | `/examples/chat-sdk/headless-mcp` |
-| **Document Editor** | Agent edits markdown with MCP Apps diff cards | `/examples/chat-sdk/document-edit` |
-| **MCP App Exercise** | Test `ui/message`, `tools/call`, `ui/open-link` | `/examples/chat-sdk/mcp-app-example` |
-| **Bonsai Shop** | E-commerce demo with checkout flows | `/examples/chat-sdk/bonsai-shop` |
+| Example | Description | Key Patterns | Path |
+|---------|-------------|--------------|------|
+| **Getting Started** | Minimal inline widget example | Basic setup | `/examples/chat-sdk/getting-started` |
+| **Chat Widget Modes** | Popup, side panel, inline configurations | Widget config | `/examples/chat-sdk/basic` |
+| **Headless Chat + MCP Apps** | Build your own UI with SDK hooks | Custom UI | `/examples/chat-sdk/headless-mcp` |
+| **Document Editor** | Agent edits markdown with MCP Apps diff cards | `notifyToolInputPartial`, refs | `/examples/chat-sdk/document-edit` |
+| **Product Enhance** | AI-powered product description enhancement | Streaming, `onToolInputPartial`, `callTool`, persistence | `/examples/product-enhance` |
+| **MCP App Exercise** | Test `ui/message`, `tools/call`, `ui/open-link` | MCP App protocol | `/examples/chat-sdk/mcp-app-example` |
+| **Bonsai Shop** | E-commerce demo with checkout flows | Full integration | `/examples/chat-sdk/bonsai-shop` |
+
+### Key Patterns Demonstrated
+
+The examples contain inline JSDoc comments explaining important patterns:
+
+- **Using refs for state**: Tool execute functions capture state via refs to avoid stale closures
+- **resourceUri matching**: Tool `_meta.ui.resourceUri` must exactly match resource `uri`
+- **Streaming with onToolInputPartial**: Receive partial tool arguments as the AI generates
+- **Detecting completion with tool.result**: Transition UI when tool execution finishes
+- **Persisting state with botdojo/persist**: Save MCP App state across page reloads
+- **Calling host tools with callTool**: MCP Apps can trigger actions on the host
+- **Size reporting**: Use `reportSize` for dynamic content in iframes
 
 ## Project Structure
 

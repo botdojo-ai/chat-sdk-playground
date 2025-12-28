@@ -57,9 +57,9 @@ export default function ProductEnhancePage() {
           required: ['enhanced_text'],
         },
         _meta: {
+          'botdojo/no-cache': true,
           ui: {
-            resourceUri: 'ui://product-enhance/context/cache_buster/product-enhance',
-            prefersProxy: true,
+            resourceUri: 'ui://product-enhance/enhance-card',
           },
         },
         execute: async (params: { enhanced_text: string }) => {
@@ -91,7 +91,7 @@ export default function ProductEnhancePage() {
     ],
     resources: [
       {
-        uri: 'ui://product-enhance/context/cache_buster/product-enhance',
+        uri: 'ui://product-enhance/enhance-card',
         name: 'Enhancement MCP App',
         description: 'MCP App for reviewing and applying description enhancements.',
         mimeType: 'text/html;profile=mcp-app',
@@ -100,7 +100,7 @@ export default function ProductEnhancePage() {
           const { fetchMcpAppHtml } = await import('@/utils/fetchMcpApp');
           const html = await fetchMcpAppHtml('enhance-mcp-app');
           return {
-            uri: 'ui://product-enhance/context/cache_buster/product-enhance',
+            uri: 'ui://product-enhance/enhance-card',
             mimeType: 'text/html;profile=mcp-app',
             text: html,
           };

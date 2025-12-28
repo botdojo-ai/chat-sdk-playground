@@ -70,8 +70,23 @@ export const LEARN_SUBSECTIONS: NavSubsection[] = [
     items: [
       {
         id: 'mcp-apps-overview',
-        title: 'Overview',
+        title: 'What Are MCP Apps?',
         route: '/examples/mcp-apps',
+      },
+      {
+        id: 'mcp-apps-inline-vs-remote',
+        title: 'Inline vs Remote',
+        route: '/examples/mcp-apps/inline-vs-remote',
+      },
+      {
+        id: 'mcp-apps-use-mcp-app-guide',
+        title: 'useMcpApp Hook',
+        route: '/examples/mcp-apps/use-mcp-app-guide',
+      },
+      {
+        id: 'mcp-apps-headless',
+        title: 'Headless Mode',
+        route: '/examples/mcp-apps/headless',
       },
     ],
   },

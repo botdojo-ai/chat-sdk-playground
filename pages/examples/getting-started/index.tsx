@@ -25,7 +25,7 @@ const TEST_AGENT_STEPS = [
   {
     title: 'Clone a test agent',
     why: 'Pull an agent that supports Frontend MCP so you can use frontend tools.',
-    command: 'botdojo cloneToProject botdojo.com/botdojo/sdk-test-flows/3112f8a1-c539-11f0-9a90-1dbafe764d7e --name "SDK - Model Context Flow"',
+    command: 'botdojo cloneToProject botdojo.com/botdojo/sdk-test-flows/390baa60-c95e-11f0-978d-47bef2a9ac47 --name "SDK - Model Context Flow"',
   },
   {
     title: 'Create a public API key',

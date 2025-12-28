@@ -77,7 +77,7 @@ export default function Checkout() {
             <div style={{ textAlign: 'center', padding: '64px', color: '#94a3b8' }}>
               <p style={{ fontSize: '18px', marginBottom: '16px' }}>Your cart is empty</p>
               <Link 
-                href="/bonsai-shop"
+                href="/examples/bonsai-shop"
                 style={{
                   display: 'inline-block',
                   padding: '12px 24px',
