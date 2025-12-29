@@ -262,7 +262,7 @@ export default function ProductEnhance({ sourceFiles }: ProductEnhanceProps) {
         if (pendingPromptRef.current) {
           const prompt = pendingPromptRef.current;
           pendingPromptRef.current = null;
-          console.log('[ProductEnhance] Sending pending prompt via effect');
+          console.log('[ProductEnhance] Sending pending prompt via effect (ready:', isChatReady, 'control:', !!chatControl, 'open:', showChat, ')');
           chatControl.sendFlowRequest({ text_input: prompt })
             .catch((err) => console.error('[ProductEnhance] Failed to send pending prompt:', err))
             .finally(() => setSending(false));
@@ -275,26 +275,17 @@ export default function ProductEnhance({ sourceFiles }: ProductEnhanceProps) {
   const handleEnhanceClick = useCallback(async () => {
     const prompt = `Enhance the product description <!--- Current description: "${descriptionRef.current}" Update the description by calling the suggestEnhancement tool-->`;
 
-    // Open chat if not already open
+    // Always open chat if not already open
     if (!showChat) {
       setShowChatWithUrl(true);
     }
 
-    // If chat is ready, send immediately; otherwise queue it for when onReady fires
-    if (isChatReady && chatControl) {
-      setSending(true);
-      try {
-        await chatControl.sendFlowRequest({ text_input: prompt });
-      } catch (error) {
-        console.error('Error sending prompt:', error);
-      } finally {
-        setSending(false);
-      }
-    } else {
-      // Queue the prompt - will be sent when onReady fires
-      pendingPromptRef.current = prompt;
-      setSending(true);
-    }
+    // Queue the prompt - it will be sent by the useEffect when chat is ready and panel is open
+    // The useEffect watches isChatReady, chatControl, and showChat, so it will automatically
+    // send when all conditions are met
+    pendingPromptRef.current = prompt;
+    setSending(true);
+    console.log('[ProductEnhance] Queued prompt (ready:', isChatReady, 'control:', !!chatControl, 'open:', showChat, ')');
   }, [showChat, isChatReady, chatControl]);
 
   // Handle token loading state
