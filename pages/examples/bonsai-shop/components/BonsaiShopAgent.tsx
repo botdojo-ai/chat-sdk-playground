@@ -186,12 +186,16 @@ export default function BonsaiShopAgent({ isOpen }: BonsaiShopAgentProps) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [chatControl, setChatControl] = useState<BotDojoChatControl | null>(null);
   const [currentPageContext, setCurrentPageContext] = useState<string>('');
+  const [isChatReady, setIsChatReady] = useState(false);
   
   // Get temporary JWT token for secure API access
   const { token, loading: tokenLoading, error: tokenError } = useTemporaryToken();
   
   // Get context for registering chat control and ready state
   const bonsaiChat = useBonsaiChatSafe();
+  
+  // Queue for messages that arrive before chat is ready
+  const pendingUiMessageRef = useRef<{ message: string; params: any; appId: string } | null>(null);
   
   // Get debug logger from the global provider (provided by _app.tsx)
   const debugLogger = useBotDojoChatDebugLogger();
@@ -241,6 +245,29 @@ export default function BonsaiShopAgent({ isOpen }: BonsaiShopAgentProps) {
   useEffect(() => {
     setCurrentPageContext(generatePageContext(router.pathname, router.query.id as string));
   }, [router.pathname, router.query.id]);
+
+  // Send pending UI message when chat becomes ready and panel is open
+  useEffect(() => {
+    if (isChatReady && chatControl && isOpen && pendingUiMessageRef.current) {
+      const pending = pendingUiMessageRef.current;
+      pendingUiMessageRef.current = null;
+      
+      const content = pending.params?.content?.[0];
+      const shouldTriggerAgent = content?.['botdojo/triggerAgent'] === true;
+      
+      if (shouldTriggerAgent) {
+        const textInput = content?.text || pending.message;
+        const body = { text_input: textInput };
+        console.log('[BonsaiShop] Sending queued triggerAgent message:', body);
+        // Small delay to ensure panel transition is complete
+        setTimeout(() => {
+          chatControl
+            .sendFlowRequest(body)
+            .catch((err: Error) => console.error('[BonsaiShop] Failed to send queued triggerAgent message', err));
+        }, 150);
+      }
+    }
+  }, [isChatReady, chatControl, isOpen]);
 
   // =============================================================================
   // Model Context - Single source of truth for tools, resources, and metadata
@@ -661,6 +688,7 @@ export default function BonsaiShopAgent({ isOpen }: BonsaiShopAgentProps) {
       onReady={() => {
         console.log('[BonsaiShop] onReady called, debugLogger:', !!debugLoggerRef.current);
         debugLoggerRef.current?.logReady();
+        setIsChatReady(true);
         // Notify context that chat is ready (sends any pending prompts)
         bonsaiChat?.onChatReady();
       }}
@@ -717,13 +745,17 @@ export default function BonsaiShopAgent({ isOpen }: BonsaiShopAgentProps) {
           content?.['botdojo/triggerAgent'] === true 
         
         if (shouldTriggerAgent) {
-          if (!chatControl) {
-            console.warn('[BonsaiShop] MCP App triggerAgent received but chatControl not ready');
-            return;
-          }
           // Extract text from content if available
           const textInput = content?.text || message;
           const body = { text_input: textInput};
+          
+          // Check if chat is ready (both control exists, onReady has fired, and panel is open)
+          if (!chatControl || !isChatReady || !isOpen) {
+            console.log('[BonsaiShop] MCP App triggerAgent received but chat not ready yet (control:', !!chatControl, 'ready:', isChatReady, 'open:', isOpen, '), queueing message');
+            pendingUiMessageRef.current = { message, params, appId };
+            return;
+          }
+          
           console.log('[BonsaiShop] Triggering agent from MCP App:', body);
           chatControl
             .sendFlowRequest(body)

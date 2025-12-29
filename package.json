@@ -1,6 +1,6 @@
 {
   "name": "interactive-agent-sdk-playground",
-  "version": "0.0.39",
+  "version": "0.0.40",
   "description": "Interactive Agent SDK - Build AI agents that see and act in your app. Built on open MCP standards for tool integration and MCP Apps for rich UI experiences.",
   "scripts": {
     "setup": "bash scripts/setup.sh",
