@@ -275,6 +275,17 @@ export default function ProductEnhance({ sourceFiles }: ProductEnhanceProps) {
   const handleEnhanceClick = useCallback(async () => {
     const prompt = `Enhance the product description <!--- Current description: "${descriptionRef.current}" Update the description by calling the suggestEnhancement tool-->`;
 
+    setSending(true);
+
+    // If chat is already open and ready, send immediately.
+    if (showChat && isChatReady && chatControlRef.current) {
+      console.log('[ProductEnhance] Sending prompt immediately (ready:', isChatReady, 'control:', !!chatControlRef.current, 'open:', showChat, ')');
+      chatControlRef.current.sendFlowRequest({ text_input: prompt })
+        .catch((err) => console.error('[ProductEnhance] Failed to send prompt:', err))
+        .finally(() => setSending(false));
+      return;
+    }
+    
     // Always open chat if not already open
     if (!showChat) {
       setShowChatWithUrl(true);
