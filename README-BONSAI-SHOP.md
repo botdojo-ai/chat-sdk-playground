@@ -39,7 +39,7 @@ Product images are generated once using the Gemini API and saved to the filesyst
 
 ### Prerequisites
 
-- Gemini API key (already included in the script: `AIzaSyAOdMii09jTGaaJEawIPQfYxaaG1PMgq_U`)
+- Gemini API key
 - `ts-node` installed (included in devDependencies)
 
 ### Generate Images
