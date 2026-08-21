@@ -2,15 +2,19 @@
 
 /**
  * Script to start Next.js dev server with ngrok and open browser
- * 
+ *
  * Usage: pnpm dev:ngrok
  */
 
-const { spawn } = require('child_process');
+const { execFile, spawn } = require('child_process');
 const http = require('http');
-const { exec } = require('child_process');
 const { promisify } = require('util');
-const execAsync = promisify(exec);
+const {
+  getDevServerCommand,
+  openBrowser,
+  validateNgrokPublicUrl,
+} = require('./dev-ngrok-utils');
+const execFileAsync = promisify(execFile);
 
 const PORT = 3500;
 const NGROK_API_URL = 'http://127.0.0.1:4040/api/tunnels';
@@ -18,7 +22,10 @@ const NGROK_API_URL = 'http://127.0.0.1:4040/api/tunnels';
 // Check if ngrok is installed
 async function checkNgrokInstalled() {
   try {
-    await execAsync('which ngrok');
+    await execFileAsync('ngrok', ['version'], {
+      shell: false,
+      windowsHide: true,
+    });
     return true;
   } catch {
     return false;
@@ -68,7 +75,7 @@ function getNgrokUrl(retries = 10) {
             const json = JSON.parse(data);
             const tunnel = json.tunnels?.find(t => t.proto === 'https');
             if (tunnel) {
-              resolve(tunnel.public_url);
+              resolve(validateNgrokPublicUrl(tunnel.public_url));
             } else if (attempts < retries) {
               setTimeout(tryGetUrl, 1000);
             } else {
@@ -94,37 +101,39 @@ function getNgrokUrl(retries = 10) {
   });
 }
 
-// Open browser (cross-platform)
-function openBrowser(url) {
-  const platform = process.platform;
-  let command;
-  
-  if (platform === 'darwin') {
-    command = `open "${url}"`;
-  } else if (platform === 'win32') {
-    command = `start "" "${url}"`;
-  } else {
-    command = `xdg-open "${url}"`;
-  }
-  
-  exec(command, (error) => {
-    if (error) {
-      console.log(`\n⚠️  Could not open browser automatically. Please visit: ${url}`);
-    } else {
-      console.log(`\n🌐 Opening browser at ${url}`);
-    }
+function startDevServer({
+  spawnImpl = spawn,
+  platform = process.platform,
+  nodePath = process.execPath,
+  packageManagerScript = process.env.npm_execpath,
+  commandInterpreter = process.env.ComSpec,
+  cwd = __dirname + '/..',
+} = {}) {
+  const devServerCommand = getDevServerCommand(platform, {
+    nodePath,
+    packageManagerScript,
+    commandInterpreter,
+  });
+
+  return spawnImpl(devServerCommand.command, devServerCommand.args, {
+    stdio: 'inherit',
+    shell: false,
+    cwd,
+  });
+}
+
+function startNgrok({ spawnImpl = spawn, port = PORT } = {}) {
+  return spawnImpl('ngrok', ['http', port.toString()], {
+    stdio: 'pipe',
+    shell: false,
   });
 }
 
 async function main() {
   console.log('🚀 Starting Next.js dev server...');
-  
+
   // Start Next.js dev server
-  const nextProcess = spawn('pnpm', ['dev'], {
-    stdio: 'inherit',
-    shell: true,
-    cwd: __dirname + '/..',
-  });
+  const nextProcess = startDevServer();
 
   // Wait for server to be ready
   try {
@@ -150,10 +159,7 @@ async function main() {
 
   // Start ngrok
   console.log('\n🔗 Starting ngrok tunnel...');
-  const ngrokProcess = spawn('ngrok', ['http', PORT.toString()], {
-    stdio: 'pipe',
-    shell: true,
-  });
+  const ngrokProcess = startNgrok();
 
   // Capture ngrok output for debugging
   ngrokProcess.stdout.on('data', (data) => {
@@ -175,10 +181,10 @@ async function main() {
     console.log(`\n✅ ngrok tunnel active!`);
     console.log(`🌐 Public URL: ${ngrokUrl}`);
     console.log(`📝 Local URL: http://localhost:${PORT}`);
-    
+
     // Open browser
     openBrowser(ngrokUrl);
-    
+
     console.log('\n💡 Press Ctrl+C to stop both servers\n');
   } catch (error) {
     console.error('❌ Failed to get ngrok URL:', error.message);
@@ -201,8 +207,18 @@ async function main() {
   });
 }
 
-main().catch((error) => {
-  console.error('❌ Error:', error);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((error) => {
+    console.error('❌ Error:', error);
+    process.exit(1);
+  });
+}
 
+module.exports = {
+  checkNgrokInstalled,
+  getNgrokUrl,
+  main,
+  startDevServer,
+  startNgrok,
+  waitForServer,
+};
