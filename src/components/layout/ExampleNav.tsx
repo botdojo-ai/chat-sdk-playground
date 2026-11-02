@@ -59,6 +59,11 @@ export const LEARN_SUBSECTIONS: NavSubsection[] = [
         route: '/examples/frontend-mcp',
       },
       {
+        id: 'frontend-mcp-workspace-app',
+        title: 'Workspace App Tools',
+        route: '/examples/frontend-mcp/workspace-app',
+      },
+      {
         id: 'frontend-mcp-task-list',
         title: 'Task List Example',
         route: '/examples/frontend-mcp/task-list',

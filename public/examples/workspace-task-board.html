@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Workspace Task Board</title>
+<style>body{font:16px system-ui,sans-serif;margin:0;background:#f4f7fb;color:#172b4d;padding:28px}main{max-width:900px;margin:auto}h1{margin-bottom:6px}p{color:#52647c}.toolbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:24px 0}select,button{font:inherit;padding:9px 14px;border:1px solid #cbd5e1;border-radius:7px;background:white}button{cursor:pointer;background:#265dd9;color:white;border:0}.board{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.column{background:#e8eef7;padding:16px;border-radius:12px;min-height:180px}.column h2{font-size:15px;margin:0 0 14px}.task{background:white;padding:16px;border-radius:8px;margin-bottom:12px;box-shadow:0 2px 5px #172b4d0c}.selected{outline:2px solid #265dd9}#status{font-size:13px}code{font-size:13px}@media(max-width:600px){.board{grid-template-columns:1fr}}</style></head>
+<body><main><h1>Workspace Task Board</h1><p>Select a task, then ask your workspace agent to read or move it.</p>
+<div class="toolbar"><label for="selection">Selected task</label><select id="selection"><option value="task-1">Draft project brief</option><option value="task-2">Review design</option><option value="task-3">Publish checklist</option></select><button id="advance">Move selected to Done</button></div>
+<div class="board" id="board"></div><p id="status" role="status">Connecting app tools…</p></main>
+<script type="module">
+import { registerFrontendMcp } from 'https://cdn.jsdelivr.net/npm/@botdojo/chat-sdk@0.0.31/lib/frontend-mcp/index.js';
+const tasks = [{id:'task-1',title:'Draft project brief',column:'Todo'},{id:'task-2',title:'Review design',column:'Doing'},{id:'task-3',title:'Publish checklist',column:'Todo'}];
+const columns = ['Todo','Doing','Done'];
+const selection = document.querySelector('#selection');
+const getBoard = () => ({selectedTaskId: selection.value, tasks: tasks.map(task=>({...task}))});
+function render(){const board=document.querySelector('#board');board.replaceChildren();for(const column of columns){const section=document.createElement('section');section.className='column';const heading=document.createElement('h2');heading.textContent=column;section.append(heading);for(const task of tasks.filter(task=>task.column===column)){const card=document.createElement('div');card.className='task'+(task.id===selection.value?' selected':'');card.textContent=task.title+' · '+task.id;section.append(card)}board.append(section)}}
+selection.addEventListener('change',render);
+function moveTask({taskId,column}){const task=tasks.find(task=>task.id===taskId);if(!task||!columns.includes(column))throw new Error('Task or column not found');task.column=column;render();return getBoard()}
+document.querySelector('#advance').onclick=()=>moveTask({taskId:selection.value,column:'Done'});
+render();
+try {
+ await registerFrontendMcp({name:'task_board',description:'The visible task board. Read current tasks and selection, then move tasks between columns.',tools:[
+  {name:'get_board',description:'Read current tasks and selected task',inputSchema:{type:'object',properties:{},additionalProperties:false},execute:async()=>getBoard()},
+  {name:'move_task',description:'Move a task to Todo, Doing, or Done',inputSchema:{type:'object',properties:{taskId:{type:'string'},column:{type:'string',enum:['Todo','Doing','Done']}},required:['taskId','column'],additionalProperties:false},execute:async args=>moveTask(args)}
+ ]});
+ document.querySelector('#status').textContent='App tools ready · get_board · move_task';
+} catch(error){document.querySelector('#status').textContent=error.message}
+</script></body></html>
